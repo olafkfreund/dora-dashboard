@@ -4,7 +4,7 @@
   # https://devenv.sh/basics/
   env.PORT = "8191";
   env.NEXT_TELEMETRY_DISABLED = "1";
-  env.DATABASE_URL = "postgresql://dora:dora@localhost:5432/dora?schema=public";
+  env.DATABASE_URL = "postgresql://dora:dora@localhost:5432/dora";
 
   # https://devenv.sh/packages/
   packages = with pkgs; [ git jq ];

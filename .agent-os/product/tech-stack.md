@@ -22,7 +22,7 @@ from the `shadcn-radix-nextjs` reference monorepo (shadcn/ui + Radix + Tailwind 
 
 ### Database
 - **Primary:** PostgreSQL 16+
-- **ORM:** Prisma
+- **ORM:** Drizzle ORM + postgres.js (pure-TypeScript; chosen over Prisma for NixOS compatibility — see DEC-004)
 - **Purpose:** Persist ingested GitHub/Jira raw events, computed metric snapshots, org/team config, users, roles, and audit logs.
 
 ### Frontend / UI System

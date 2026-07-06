@@ -1,0 +1,103 @@
+import {
+  pgTable,
+  text,
+  timestamp,
+  integer,
+  primaryKey,
+  pgEnum,
+  jsonb,
+} from "drizzle-orm/pg-core"
+
+export const roleEnum = pgEnum("role", ["ADMIN", "LEAD", "VIEWER"])
+export const userStatusEnum = pgEnum("user_status", ["ACTIVE", "DISABLED"])
+export const integrationProviderEnum = pgEnum("integration_provider", [
+  "GITHUB",
+  "JIRA",
+])
+export const integrationStatusEnum = pgEnum("integration_status", [
+  "UNCONFIGURED",
+  "CONNECTED",
+  "ERROR",
+])
+
+// --- Auth.js core tables (shape required by @auth/drizzle-adapter) ---
+export const users = pgTable("user", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text("name"),
+  email: text("email").notNull().unique(),
+  emailVerified: timestamp("emailVerified", { mode: "date" }),
+  image: text("image"),
+  // Local-auth + RBAC extensions
+  passwordHash: text("passwordHash"),
+  role: roleEnum("role").notNull().default("VIEWER"),
+  status: userStatusEnum("status").notNull().default("ACTIVE"),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  lastLoginAt: timestamp("lastLoginAt", { mode: "date" }),
+})
+
+export const accounts = pgTable(
+  "account",
+  {
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("providerAccountId").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+  },
+  (account) => [
+    primaryKey({ columns: [account.provider, account.providerAccountId] }),
+  ]
+)
+
+export const sessions = pgTable("session", {
+  sessionToken: text("sessionToken").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expires: timestamp("expires", { mode: "date" }).notNull(),
+})
+
+export const verificationTokens = pgTable(
+  "verificationToken",
+  {
+    identifier: text("identifier").notNull(),
+    token: text("token").notNull(),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
+  },
+  (vt) => [primaryKey({ columns: [vt.identifier, vt.token] })]
+)
+
+// --- Integrations (GitHub / Jira). Secret stored encrypted (AES-256-GCM). ---
+export const integrations = pgTable("integration", {
+  provider: integrationProviderEnum("provider").primaryKey(),
+  status: integrationStatusEnum("status").notNull().default("UNCONFIGURED"),
+  config: jsonb("config").notNull().default({}),
+  encryptedToken: text("encryptedToken"),
+  lastSyncAt: timestamp("lastSyncAt", { mode: "date" }),
+  lastError: text("lastError"),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  updatedById: text("updatedById"),
+})
+
+// --- Audit log ---
+export const auditLogs = pgTable("audit_log", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  actorId: text("actorId").references(() => users.id, { onDelete: "set null" }),
+  action: text("action").notNull(),
+  target: text("target"),
+  meta: jsonb("meta").notNull().default({}),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+})

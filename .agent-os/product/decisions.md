@@ -86,3 +86,62 @@ requires a Next.js/shadcn UI, Docker-based self-hosting, and Entra ID SSO.
 
 **Positive:** Consistency with the reference design system; strong fit for enterprise identity and self-hosting.
 **Negative:** Diverges from the org's default Rails stack; team must be comfortable with Next.js + Prisma.
+
+---
+
+## 2026-07-06: Team-level metrics only — no individual ranking
+
+**ID:** DEC-003
+**Status:** Accepted
+**Category:** Product
+**Stakeholders:** Product Owner, Engineering Leadership
+
+### Decision
+
+The dashboard measures and displays metrics at **team/org level only**. It will not
+provide per-individual performance dashboards or rank individual developers.
+
+### Context
+
+Market research shows the mature tools (Swarmia, DX Core 4, Cortex) deliberately avoid
+individual-developer metrics because they drive surveillance, gaming, and Goodhart's-Law
+distortions (larger PRs, more commits, less collaboration). For regulated-industry buyers,
+an explicit anti-surveillance stance is both an adoption enabler and an ethical safeguard.
+
+### Consequences
+
+**Positive:** Trust and adoption from engineering teams; clear differentiator; avoids
+misuse of metrics for performance management.
+**Negative:** Cannot serve buyers who explicitly want individual productivity tracking
+(intentionally out of scope).
+
+_Tracked in #25._
+
+---
+
+## 2026-07-06: Drizzle ORM instead of Prisma (NixOS compatibility)
+
+**ID:** DEC-004
+**Status:** Accepted
+**Category:** Technical
+**Stakeholders:** Tech Lead, Platform Engineering
+
+### Decision
+
+Use **Drizzle ORM + postgres.js** as the data layer instead of Prisma (supersedes the
+Prisma choice in DEC-002).
+
+### Context
+
+Prisma relies on downloaded Rust engine binaries that are not available/compatible for
+`linux-nixos` (404 on the engine mirror; generic-linux binaries won't run under the NixOS
+linker), and the brand-new Prisma 7.8 has no matching nixpkgs engine. Drizzle + postgres.js
+are pure TypeScript with no native/binary dependencies, so they work cleanly on NixOS and
+in air-gapped/self-hosted deployments — which aligns with the product's target environment.
+
+### Consequences
+
+**Positive:** Reliable on NixOS and in restricted environments; lightweight; SQL-first,
+transparent migrations (`drizzle-kit generate` + committed SQL); no engine version drift.
+**Negative:** Less "batteries-included" than Prisma (manual relations); team must learn
+Drizzle's query API.

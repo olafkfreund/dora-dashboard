@@ -1,37 +1,13 @@
-import { Gauge, Github, ShieldCheck } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { requireUser } from "@/lib/auth-helpers"
+import { AppHeader } from "@/components/app-header"
 import { MetricExplorer } from "@/components/metric-explorer"
 
-export default function Home() {
+export default async function Home() {
+  const user = await requireUser()
+
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Gauge className="size-5" />
-            </div>
-            <div>
-              <h1 className="text-base font-semibold leading-tight">DORA Dashboard</h1>
-              <p className="text-xs text-muted-foreground">
-                Delivery intelligence · GitHub + Jira
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="hidden md:inline-flex">
-              <Github className="size-4" /> Sign in with GitHub
-            </Button>
-            <Button size="sm" className="hidden sm:inline-flex">
-              <ShieldCheck className="size-4" />
-              <span className="hidden md:inline">Sign in with Entra ID</span>
-              <span className="md:hidden">Sign in</span>
-            </Button>
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
+      <AppHeader user={user} active="dashboard" />
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mb-8 flex flex-col gap-2">
@@ -53,9 +29,8 @@ export default function Home() {
         <MetricExplorer />
 
         <footer className="mt-6 border-t border-border pt-6 text-xs text-muted-foreground">
-          Self-hosted · no third-party data egress · Azure Entra ID SSO + GitHub
-          OAuth · Docker &amp; Helm. See the roadmap and epic on GitHub for tracked
-          work.
+          Self-hosted · no third-party data egress · team-level metrics only (no
+          individual ranking) · Azure Entra ID SSO + GitHub OAuth · Docker &amp; Helm.
         </footer>
       </main>
     </div>
