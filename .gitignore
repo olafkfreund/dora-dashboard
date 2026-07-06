@@ -5,6 +5,7 @@ node_modules/
 
 # Build outputs
 .next/
+next-env.d.ts
 out/
 dist/
 build/
@@ -37,3 +38,11 @@ Thumbs.db
 coverage/
 playwright-report/
 test-results/
+
+# Nix / devenv / direnv
+.devenv/
+.devenv.flake.nix
+.direnv/
+result
+result-*
+# keep devenv.lock and flake.lock committed for reproducibility
