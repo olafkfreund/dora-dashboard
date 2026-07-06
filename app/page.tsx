@@ -7,7 +7,7 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <Gauge className="size-5" />
@@ -20,18 +20,20 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="hidden md:inline-flex">
               <Github className="size-4" /> Sign in with GitHub
             </Button>
-            <Button size="sm">
-              <ShieldCheck className="size-4" /> Sign in with Entra ID
+            <Button size="sm" className="hidden sm:inline-flex">
+              <ShieldCheck className="size-4" />
+              <span className="hidden md:inline">Sign in with Entra ID</span>
+              <span className="md:hidden">Sign in</span>
             </Button>
             <ThemeToggle />
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-6 py-8">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mb-8 flex flex-col gap-2">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-xs text-muted-foreground">
             <span className="size-2 rounded-full bg-[color:var(--success)]" />

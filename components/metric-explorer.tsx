@@ -105,7 +105,7 @@ function ChartsView({ onOpen }: { onOpen: (id: string) => void }) {
       {groups.map((group) => (
         <section key={group} className="mb-10">
           <GroupHeading group={group} />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {metrics
               .filter((m) => m.group === group)
               .map((m) => {
@@ -159,7 +159,7 @@ function ModernView({ onOpen }: { onOpen: (id: string) => void }) {
       {groups.map((group) => (
         <section key={group} className="mb-10">
           <GroupHeading group={group} />
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             {metrics
               .filter((m) => m.group === group)
               .map((m, i) => {
@@ -275,7 +275,7 @@ export function MetricExplorer() {
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between gap-4">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">
           {view === "cards" && "Compact cards — click any metric for details."}
           {view === "charts" && "Colored per-metric charts."}
