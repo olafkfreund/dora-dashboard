@@ -11,7 +11,7 @@ IMAGE_TAG="${1:-latest}"
 export AWS_PROFILE="${AWS_PROFILE:-Synechron}"
 export AWS_REGION="${AWS_REGION:-eu-west-2}"
 CLUSTER=aws-dashboard-cluster
-NAMESPACE=aws-dashboard
+NAMESPACE=dora
 RELEASE=dora-dashboard
 CHART_DIR="$(cd "$(dirname "$0")/.." && pwd)/charts/dora-dashboard"
 

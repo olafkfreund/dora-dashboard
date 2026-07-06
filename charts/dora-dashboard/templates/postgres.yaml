@@ -78,6 +78,12 @@ spec:
             periodSeconds: 15
           resources:
             {{- toYaml .Values.postgres.resources | nindent 12 }}
+      {{- if not .Values.postgres.persistence.enabled }}
+      volumes:
+        - name: data
+          emptyDir: {}
+      {{- end }}
+  {{- if .Values.postgres.persistence.enabled }}
   volumeClaimTemplates:
     - metadata:
         name: data
@@ -89,4 +95,5 @@ spec:
         resources:
           requests:
             storage: {{ .Values.postgres.storage }}
+  {{- end }}
 {{- end }}

@@ -72,6 +72,10 @@ postgres:
   user: dora
   password: ""          # generated if empty
   database: dora
+  # Persistence requires a working block-storage provisioner (e.g. EBS CSI).
+  # Set persistence.enabled=false to use ephemeral emptyDir (data lost on restart).
+  persistence:
+    enabled: true
   storage: 5Gi
   storageClass: ""
   resources:

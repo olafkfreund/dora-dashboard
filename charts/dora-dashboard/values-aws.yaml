@@ -5,7 +5,8 @@
 ##     -f charts/dora-dashboard/values-aws.yaml \
 ##     --set image.tag=<git-sha>
 
-replicaCount: 2
+# Single node cluster with limited ENI IPs — keep the replica count modest.
+replicaCount: 1
 
 image:
   repository: ghcr.io/olafkfreund/dora-dashboard
@@ -26,17 +27,25 @@ ingress:
     enabled: true
     secretName: dora-dashboard-tls
 
+# Disabled: no metrics-server in the cluster (HPA can't read CPU).
 autoscaling:
-  enabled: true
-  minReplicas: 2
-  maxReplicas: 5
-  targetCPUUtilizationPercentage: 75
+  enabled: false
 
 # Bundled Postgres for this environment. For a hardened prod install, set
 # postgres.enabled=false and secrets.databaseUrl to an RDS connection string.
 postgres:
   enabled: true
-  storage: 5Gi
+  # Cluster has no EBS CSI driver, so use ephemeral storage for now.
+  # For persistence: install the aws-ebs-csi-driver addon and set this true
+  # (storageClass: gp2), or use managed RDS (postgres.enabled=false).
+  persistence:
+    enabled: false
 
 bootstrap:
   adminEmail: admin@dora.local
+
+# Node is at its pod cap (11/11), so the separate migrate Job can't schedule.
+# Run migrations via `kubectl exec deploy/dora-dashboard -- node scripts/migrate.mjs`
+# (and seed) instead. Re-enable once the cluster has more node capacity.
+migrate:
+  enabled: false
