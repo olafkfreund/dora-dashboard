@@ -252,10 +252,18 @@ export function MetricExplorer() {
   const [openId, setOpenId] = React.useState<string | null>(null)
   const active = metrics.find((m) => m.id === openId) ?? null
 
-  // Restore persisted view on mount.
+  // Deep-link support (?view=&metric=) takes precedence over persisted view.
   React.useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY) as ViewMode | null
-    if (saved && VIEWS.some((v) => v.id === saved)) setView(saved)
+    const params = new URLSearchParams(window.location.search)
+    const qView = params.get("view") as ViewMode | null
+    if (qView && VIEWS.some((v) => v.id === qView)) {
+      setView(qView)
+    } else {
+      const saved = window.localStorage.getItem(STORAGE_KEY) as ViewMode | null
+      if (saved && VIEWS.some((v) => v.id === saved)) setView(saved)
+    }
+    const qMetric = params.get("metric")
+    if (qMetric && metrics.some((m) => m.id === qMetric)) setOpenId(qMetric)
   }, [])
 
   const changeView = (v: ViewMode) => {

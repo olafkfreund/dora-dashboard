@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ page.title | default: site.title }}</title>
+    <meta name="description" content="{{ site.description }}" />
+    <meta property="og:title" content="{{ page.title | default: site.title }}" />
+    <meta property="og:description" content="{{ site.description }}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="{{ '/assets/img/modern.png' | absolute_url }}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="{{ '/' | relative_url }}">
+        <span class="brand-mark" aria-hidden="true">◔</span>
+        <span class="brand-text">
+          <strong>DORA Dashboard</strong>
+          <small>Delivery intelligence · GitHub + Jira</small>
+        </span>
+      </a>
+      <nav class="site-nav">
+        <a href="#views">Views</a>
+        <a href="#metrics">Metrics</a>
+        <a href="#stack">Stack</a>
+        <a class="btn btn-primary" href="{{ site.repo }}">GitHub ↗</a>
+      </nav>
+    </header>
+
+    <main>{{ content }}</main>
+
+    <footer class="site-footer">
+      <p>
+        Self-hosted · no third-party data egress · Azure Entra ID SSO + GitHub
+        OAuth · Docker &amp; Helm.
+      </p>
+      <p class="muted">
+        <a href="{{ site.repo }}">Repository</a> ·
+        <a href="{{ site.repo }}/issues/15">Epic &amp; roadmap</a> ·
+        Screenshots show a preview build with sample data.
+      </p>
+    </footer>
+  </body>
+</html>

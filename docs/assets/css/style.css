@@ -1,0 +1,363 @@
+/* DORA Dashboard showcase — branding matched to the app (OKLCH tokens, amber primary, Montserrat). */
+:root {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --primary: oklch(0.795 0.184 86.047);
+  --primary-foreground: oklch(0.145 0 0);
+  --border: oklch(1 0 0 / 12%);
+  --ring: oklch(0.556 0 0);
+  --success: oklch(0.696 0.17 149.214);
+  --radius: 16px;
+  --max: 1120px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(60rem 40rem at 80% -10%, oklch(0.795 0.184 86.047 / 12%), transparent 60%),
+    radial-gradient(50rem 40rem at 0% 10%, oklch(0.623 0.214 259.815 / 10%), transparent 55%),
+    var(--background);
+  color: var(--foreground);
+  font-family: "Montserrat", system-ui, -apple-system, sans-serif;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+code,
+.mono {
+  font-family: "Geist Mono", ui-monospace, monospace;
+}
+
+.muted {
+  color: var(--muted-foreground);
+}
+
+/* ---------- Header ---------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: oklch(0.145 0 0 / 72%);
+  backdrop-filter: blur(10px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 10px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.brand-text small {
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  font-size: 0.9rem;
+}
+.site-nav a:not(.btn):hover {
+  color: var(--primary);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.95rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 0.88rem;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    background 0.15s ease;
+}
+.btn:hover {
+  transform: translateY(-1px);
+}
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: transparent;
+}
+.btn-ghost {
+  background: transparent;
+}
+.btn-ghost:hover {
+  background: var(--muted);
+}
+
+/* ---------- Layout ---------- */
+main {
+  display: block;
+}
+.section {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 4.5rem 1.5rem;
+}
+.section h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  margin: 0 0 0.4rem;
+}
+.section .lead {
+  color: var(--muted-foreground);
+  max-width: 42rem;
+  margin: 0 0 2rem;
+}
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 0 0 0.6rem;
+}
+
+/* ---------- Hero ---------- */
+.hero {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 5rem 1.5rem 2rem;
+  text-align: center;
+}
+.hero h1 {
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  line-height: 1.05;
+  margin: 0.6rem 0 1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.hero h1 .accent {
+  color: var(--primary);
+}
+.hero p {
+  color: var(--muted-foreground);
+  max-width: 44rem;
+  margin: 0 auto 1.8rem;
+  font-size: 1.08rem;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+}
+.pill .dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--success);
+}
+.hero-cta {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+.badges {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.badge {
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: var(--muted);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+
+.hero-shot {
+  max-width: var(--max);
+  margin: 2.5rem auto 0;
+  padding: 0 1.5rem;
+}
+.hero-shot img,
+.shot img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: 0 30px 80px -30px oklch(0 0 0 / 70%);
+}
+
+/* ---------- Feature grid ---------- */
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+.feature {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.4rem;
+}
+.feature .ico {
+  font-size: 1.4rem;
+  margin-bottom: 0.5rem;
+}
+.feature h3 {
+  margin: 0 0 0.3rem;
+  font-size: 1.02rem;
+}
+.feature p {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+}
+
+/* ---------- Views showcase ---------- */
+.shot {
+  margin-bottom: 3rem;
+}
+.shot:last-child {
+  margin-bottom: 0;
+}
+.shot-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+  flex-wrap: wrap;
+}
+.shot-head h3 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.tag {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 700;
+}
+.shot-head p {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+}
+
+/* ---------- Metrics ---------- */
+.metric-cols {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.metric-group {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.3rem 1.4rem;
+}
+.metric-group h3 {
+  margin: 0 0 0.7rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted-foreground);
+}
+.metric-group ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.metric-group li {
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.metric-group li:first-child {
+  border-top: none;
+}
+.metric-group li span {
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
+/* ---------- Stack ---------- */
+.stack-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.stack-list span {
+  padding: 0.4rem 0.8rem;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+/* ---------- Footer ---------- */
+.site-footer {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+}
+.site-footer a:hover {
+  color: var(--primary);
+}
+
+@media (max-width: 640px) {
+  .site-nav a:not(.btn) {
+    display: none;
+  }
+}

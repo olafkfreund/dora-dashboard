@@ -1,0 +1,184 @@
+---
+layout: default
+---
+
+<section class="hero">
+  <span class="pill"><span class="dot"></span> Preview build · sample data</span>
+  <h1>Delivery intelligence for<br /><span class="accent">regulated environments</span></h1>
+  <p>
+    A self-hosted, Docker-based portal that unifies <strong>DORA-4</strong> and
+    Synechron's extended delivery &amp; quality metrics from <strong>GitHub</strong>
+    and <strong>Jira</strong> — behind Azure Entra ID SSO and GitHub OAuth, with no
+    third-party data egress.
+  </p>
+  <div class="hero-cta">
+    <a class="btn btn-primary" href="{{ site.repo }}">View on GitHub ↗</a>
+    <a class="btn btn-ghost" href="#views">See the 3 views ↓</a>
+  </div>
+  <div class="badges">
+    <span class="badge">Next.js 16</span>
+    <span class="badge">shadcn / Radix</span>
+    <span class="badge">Docker + Helm</span>
+    <span class="badge">Entra ID SSO</span>
+    <span class="badge">GitHub OAuth</span>
+    <span class="badge">PostgreSQL</span>
+  </div>
+</section>
+
+<div class="hero-shot">
+  <img
+    src="{{ '/assets/img/modern.png' | relative_url }}"
+    alt="DORA Dashboard — Modern animated view with colorful gradient charts and radial gauges"
+    loading="eager"
+  />
+</div>
+
+<!-- Features -->
+<section class="section" id="features">
+  <p class="eyebrow">Why DORA Dashboard</p>
+  <h2>Built for teams that can't use SaaS analytics</h2>
+  <p class="lead">
+    Everything runs inside your estate — auditable, air-gap-friendly, and branded
+    to your organization.
+  </p>
+  <div class="grid">
+    <div class="feature">
+      <div class="ico">🔒</div>
+      <h3>Self-hosted &amp; auditable</h3>
+      <p>No data leaves your network. Documented metric formulas and access audit logging for compliance.</p>
+    </div>
+    <div class="feature">
+      <div class="ico">🔑</div>
+      <h3>Enterprise SSO</h3>
+      <p>Azure Entra ID (OIDC) single sign-on plus GitHub OAuth, with role-based access control.</p>
+    </div>
+    <div class="feature">
+      <div class="ico">🔗</div>
+      <h3>GitHub + Jira, correlated</h3>
+      <p>End-to-end lead and cycle time by joining GitHub delivery events to Jira work items.</p>
+    </div>
+    <div class="feature">
+      <div class="ico">🐳</div>
+      <h3>Docker &amp; Helm</h3>
+      <p>Hardened container image with docker-compose for small deploys and a Helm chart for Kubernetes.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Views showcase -->
+<section class="section" id="views">
+  <p class="eyebrow">Three ways to view</p>
+  <h2>Pick the visualization that fits the audience</h2>
+  <p class="lead">
+    The same metrics, three switchable layouts — chosen per user and remembered.
+    Every card opens a detail view with definition, formula, target, and trend.
+  </p>
+
+  <div class="shot">
+    <div class="shot-head">
+      <h3>1. Cards</h3>
+      <span class="tag">Compact</span>
+      <p>Dense, scannable KPI cards — ideal for a quick executive glance.</p>
+    </div>
+    <img
+      src="{{ '/assets/img/cards.png' | relative_url }}"
+      alt="Cards view — compact KPI cards grouped by DORA-4, Flow, and Velocity & Quality"
+      loading="lazy"
+    />
+  </div>
+
+  <div class="shot">
+    <div class="shot-head">
+      <h3>2. Charts</h3>
+      <span class="tag">Colored</span>
+      <p>Per-metric colored bar charts with accent branding and target lines.</p>
+    </div>
+    <img
+      src="{{ '/assets/img/charts.png' | relative_url }}"
+      alt="Charts view — colored per-metric bar charts"
+      loading="lazy"
+    />
+  </div>
+
+  <div class="shot">
+    <div class="shot-head">
+      <h3>3. Modern</h3>
+      <span class="tag">Animated</span>
+      <p>Colorful gradient area charts, animated radial gauges, and glow accents.</p>
+    </div>
+    <img
+      src="{{ '/assets/img/modern.png' | relative_url }}"
+      alt="Modern view — animated colorful gradient charts and radial gauges"
+      loading="lazy"
+    />
+  </div>
+
+  <div class="shot">
+    <div class="shot-head">
+      <h3>Metric detail</h3>
+      <span class="tag">Drill-down</span>
+      <p>Click any metric for its definition, calculation formula, target, trend, and insight.</p>
+    </div>
+    <img
+      src="{{ '/assets/img/detail.png' | relative_url }}"
+      alt="Metric detail modal — Deployment Frequency with trend chart, definition, and formula"
+      loading="lazy"
+    />
+  </div>
+</section>
+
+<!-- Metrics -->
+<section class="section" id="metrics">
+  <p class="eyebrow">Metrics</p>
+  <h2>DORA-4 plus the extended delivery set</h2>
+  <p class="lead">
+    Outcome metrics and the leading indicators teams need to act early.
+  </p>
+  <div class="metric-cols">
+    <div class="metric-group">
+      <h3>DORA-4</h3>
+      <ul>
+        <li>Deployment Frequency <span>— throughput</span></li>
+        <li>Lead Time for Changes <span>— speed</span></li>
+        <li>Change Failure Rate <span>— quality</span></li>
+        <li>Mean Time to Restore <span>— resilience</span></li>
+      </ul>
+    </div>
+    <div class="metric-group">
+      <h3>Flow</h3>
+      <ul>
+        <li>Cycle Time <span>— execution</span></li>
+        <li>Work Item Age <span>— leading indicator</span></li>
+        <li>Blocked Time <span>— friction</span></li>
+        <li>Delivery Predictability <span>— planning</span></li>
+      </ul>
+    </div>
+    <div class="metric-group">
+      <h3>Velocity &amp; Quality</h3>
+      <ul>
+        <li>Average Velocity <span>— forecasting</span></li>
+        <li>Test Automation Coverage <span>— confidence</span></li>
+        <li>Defect Escape Rate <span>— quality</span></li>
+        <li>Defect Root Cause <span>— rework</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Stack -->
+<section class="section" id="stack">
+  <p class="eyebrow">Under the hood</p>
+  <h2>Modern, self-hostable stack</h2>
+  <p class="lead">Reuses a shadcn/Radix design system for a polished, themeable UI.</p>
+  <div class="stack-list">
+    <span>Next.js 16 (App Router)</span>
+    <span>TypeScript</span>
+    <span>shadcn/ui · Radix</span>
+    <span>Tailwind v4 (OKLCH)</span>
+    <span>PostgreSQL · Prisma</span>
+    <span>Auth.js (Entra ID + GitHub)</span>
+    <span>Octokit · Jira REST</span>
+    <span>Docker · Helm</span>
+    <span>GitHub Actions CI</span>
+  </div>
+</section>

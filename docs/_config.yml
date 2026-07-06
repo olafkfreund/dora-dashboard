@@ -1,0 +1,16 @@
+# GitHub Pages (native Jekyll) configuration for the DORA Dashboard showcase.
+title: DORA Dashboard
+description: >-
+  Self-hosted delivery-intelligence portal — DORA-4 plus Synechron's extended
+  delivery & quality metrics from GitHub and Jira, built for highly regulated
+  environments. Docker-based, with Azure Entra ID SSO and GitHub OAuth.
+url: "https://olafkfreund.github.io"
+baseurl: "/dora-dashboard"
+github_username: olafkfreund
+repo: "https://github.com/olafkfreund/dora-dashboard"
+
+# Native GitHub Pages build — no custom plugins (keeps safe-mode happy).
+plugins: []
+
+exclude:
+  - README.md
