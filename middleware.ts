@@ -1,7 +1,8 @@
 import NextAuth from "next-auth"
 import { authConfig } from "./auth.config"
 
-export const { auth: middleware } = NextAuth(authConfig)
+// Edge-safe auth middleware (uses the DB-free config; JWT verification only).
+export default NextAuth(authConfig).auth
 
 export const config = {
   // Protect everything except Next internals, auth API, and static assets.

@@ -1,0 +1,103 @@
+## Default values for dora-dashboard.
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/olafkfreund/dora-dashboard
+  # Overrides the image tag (defaults to chart appVersion).
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  enabled: true
+  className: nginx
+  # Public hostname. On EKS + ingress-nginx we use <ELB-IP>.nip.io.
+  host: 52.56.112.109.nip.io
+  clusterIssuer: letsencrypt-prod
+  tls:
+    enabled: true
+    secretName: dora-dashboard-tls
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 75
+
+## App configuration (non-secret).
+config:
+  # Public origin used by Auth.js. Defaults to https://<ingress.host>.
+  nextauthUrl: ""
+
+## Secrets. Generated on first install and preserved across upgrades (via lookup).
+## For production, set secrets.databaseUrl to a managed DB and disable postgres.
+secrets:
+  create: true
+  existingSecret: ""
+  authSecret: ""        # AUTH_SECRET (generated if empty)
+  appEncryptionKey: ""  # APP_ENCRYPTION_KEY, 32-byte base64 (generated if empty)
+  databaseUrl: ""       # external DB URL; ignored when postgres.enabled
+
+bootstrap:
+  adminEmail: admin@dora.local
+  adminPassword: ""     # generated once if empty (see NOTES on how to read it)
+
+## Optional bundled PostgreSQL (demo / self-contained). Disable for RDS.
+postgres:
+  enabled: true
+  image: postgres:16-alpine
+  user: dora
+  password: ""          # generated if empty
+  database: dora
+  storage: 5Gi
+  storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+## Run migrations + seed as a Helm pre-install/pre-upgrade hook Job.
+migrate:
+  enabled: true
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -2,10 +2,11 @@ import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
 import * as schema from "./schema"
 
-const connectionString = process.env.DATABASE_URL
-if (!connectionString) {
-  throw new Error("DATABASE_URL is not set")
-}
+// postgres.js connects lazily (on first query), so constructing with a
+// placeholder when DATABASE_URL is unset lets `next build` evaluate modules
+// without a live database. A real DATABASE_URL is required at runtime.
+const connectionString =
+  process.env.DATABASE_URL ?? "postgres://placeholder:placeholder@127.0.0.1:5432/placeholder"
 
 // Reuse a single client across hot-reloads in dev.
 const globalForDb = globalThis as unknown as { _pgClient?: ReturnType<typeof postgres> }

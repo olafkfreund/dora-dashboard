@@ -1,0 +1,15 @@
+apiVersion: v2
+name: dora-dashboard
+description: Self-hosted DORA + delivery-metrics portal for regulated environments
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - dora
+  - metrics
+  - dashboard
+home: https://github.com/olafkfreund/dora-dashboard
+sources:
+  - https://github.com/olafkfreund/dora-dashboard
+maintainers:
+  - name: olafkfreund

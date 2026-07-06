@@ -1,0 +1,23 @@
+DORA Dashboard has been deployed.
+
+URL:  https://{{ .Values.ingress.host }}
+
+1. Wait for the TLS certificate to be issued by cert-manager:
+   kubectl get certificate -n {{ .Release.Namespace }}
+
+2. Bootstrap admin login:
+   Email:    {{ .Values.bootstrap.adminEmail }}
+   Password: kubectl get secret {{ include "dora.secretName" . }} -n {{ .Release.Namespace }} \
+               -o jsonpath='{.data.BOOTSTRAP_ADMIN_PASSWORD}' | base64 -d ; echo
+
+   ⚠️  Change this password after first sign-in.
+
+3. Check rollout:
+   kubectl rollout status deploy/{{ include "dora.fullname" . }} -n {{ .Release.Namespace }}
+
+{{- if .Values.postgres.enabled }}
+
+NOTE: A bundled PostgreSQL is running in-cluster (postgres.enabled=true).
+For production, use a managed database: set postgres.enabled=false and
+secrets.databaseUrl to your RDS connection string.
+{{- end }}
