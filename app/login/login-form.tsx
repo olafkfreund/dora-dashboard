@@ -1,12 +1,17 @@
 "use client"
 
 import { useActionState } from "react"
-import { Gauge, ShieldCheck } from "lucide-react"
+import { Gauge, Github, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { loginAction } from "./actions"
+import { loginAction, signInEntra, signInGithubSso } from "./actions"
 
-export function LoginForm() {
+export function LoginForm({
+  sso = { entra: false, github: false },
+}: {
+  sso?: { entra: boolean; github: boolean }
+}) {
   const [error, formAction, pending] = useActionState(loginAction, undefined)
+  const hasSso = sso.entra || sso.github
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
@@ -65,12 +70,35 @@ export function LoginForm() {
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? "Signing in…" : "Sign in"}
           </Button>
-
-          <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
-            <ShieldCheck className="size-3.5" />
-            Enterprise SSO (Entra ID / GitHub) can be enabled by an administrator.
-          </div>
         </form>
+
+        {hasSso ? (
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="h-px flex-1 bg-border" /> or continue with{" "}
+              <span className="h-px flex-1 bg-border" />
+            </div>
+            {sso.entra && (
+              <form action={signInEntra}>
+                <Button type="submit" variant="outline" className="w-full">
+                  <ShieldCheck className="size-4" /> Sign in with Entra ID
+                </Button>
+              </form>
+            )}
+            {sso.github && (
+              <form action={signInGithubSso}>
+                <Button type="submit" variant="outline" className="w-full">
+                  <Github className="size-4" /> Sign in with GitHub
+                </Button>
+              </form>
+            )}
+          </div>
+        ) : (
+          <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+            <ShieldCheck className="size-3.5" />
+            Enterprise SSO (Entra ID / GitHub) can be enabled in Settings.
+          </div>
+        )}
       </div>
     </div>
   )

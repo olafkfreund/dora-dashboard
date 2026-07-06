@@ -22,3 +22,11 @@ export async function loginAction(
     throw error
   }
 }
+
+export async function signInEntra() {
+  await signIn("microsoft-entra-id", { redirectTo: "/" })
+}
+
+export async function signInGithubSso() {
+  await signIn("github", { redirectTo: "/" })
+}

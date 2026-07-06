@@ -6,6 +6,7 @@ import {
   primaryKey,
   pgEnum,
   jsonb,
+  boolean,
 } from "drizzle-orm/pg-core"
 
 export const roleEnum = pgEnum("role", ["ADMIN", "LEAD", "VIEWER"])
@@ -86,6 +87,19 @@ export const integrations = pgTable("integration", {
   encryptedToken: text("encryptedToken"),
   lastSyncAt: timestamp("lastSyncAt", { mode: "date" }),
   lastError: text("lastError"),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  updatedById: text("updatedById"),
+})
+
+// --- SSO providers (Entra ID / GitHub OAuth). Client secret encrypted at rest. ---
+export const ssoProviderEnum = pgEnum("sso_provider_type", ["ENTRA", "GITHUB"])
+
+export const ssoProviders = pgTable("sso_provider", {
+  provider: ssoProviderEnum("provider").primaryKey(),
+  enabled: boolean("enabled").notNull().default(false),
+  // Non-secret config: { clientId, tenantId? }
+  config: jsonb("config").notNull().default({}),
+  encryptedSecret: text("encryptedSecret"),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
   updatedById: text("updatedById"),
 })
