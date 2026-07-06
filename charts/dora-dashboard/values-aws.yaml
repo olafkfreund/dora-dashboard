@@ -12,10 +12,15 @@ image:
   tag: latest
   pullPolicy: IfNotPresent
 
+# GHCR image is private — the deploy creates this pull secret in the namespace.
+imagePullSecrets:
+  - name: ghcr-pull
+
 ingress:
   enabled: true
   className: nginx
-  host: 52.56.112.109.nip.io
+  # Dedicated host — leaves the existing portal on 52.56.112.109.nip.io untouched.
+  host: dora.52.56.112.109.nip.io
   clusterIssuer: letsencrypt-prod
   tls:
     enabled: true

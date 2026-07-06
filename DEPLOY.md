@@ -4,7 +4,8 @@ The portal deploys to the **`aws-dashboard-cluster`** EKS cluster (AWS `Synechro
 profile, `eu-west-2`) via a Helm chart, behind **ingress-nginx** with a **Let's Encrypt**
 TLS certificate issued by **cert-manager** (`letsencrypt-prod` ClusterIssuer).
 
-- **URL:** https://52.56.112.109.nip.io  (`<ingress-ELB-IP>.nip.io`)
+- **URL:** https://dora.52.56.112.109.nip.io  (dedicated host; leaves any existing app on `52.56.112.109.nip.io` untouched)
+- **One-shot install:** `deploy/install-aws.sh [image-tag]`
 - **Namespace:** `aws-dashboard`
 - **Image:** `ghcr.io/olafkfreund/dora-dashboard`
 
