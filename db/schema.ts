@@ -13,6 +13,7 @@ export const roleEnum = pgEnum("role", ["ADMIN", "LEAD", "VIEWER"])
 export const userStatusEnum = pgEnum("user_status", ["ACTIVE", "DISABLED"])
 export const integrationProviderEnum = pgEnum("integration_provider", [
   "GITHUB",
+  "GITLAB",
   "JIRA",
 ])
 export const integrationStatusEnum = pgEnum("integration_status", [

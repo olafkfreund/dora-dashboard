@@ -1,13 +1,13 @@
 "use client"
 
 import { useActionState } from "react"
-import { Github, ListChecks, Plug } from "lucide-react"
+import { Github, Gitlab, ListChecks, Plug } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field } from "@/components/ui/labeled-input"
 import { FormMessage } from "@/components/ui/form-message"
 import { StatusBadge, type BadgeTone } from "@/components/ui/status-badge"
-import { saveGithub, saveJira, testConnection } from "./actions"
+import { saveGithub, saveGitlab, saveJira, testConnection } from "./actions"
 
 export interface IntegrationView {
   status: "UNCONFIGURED" | "CONNECTED" | "ERROR"
@@ -22,13 +22,39 @@ const STATUS_TONE: Record<IntegrationView["status"], BadgeTone> = {
   UNCONFIGURED: "muted",
 }
 
+function TestForm({
+  provider,
+  state,
+  action,
+}: {
+  provider: string
+  state: { ok?: boolean; message?: string } | undefined
+  action: (payload: FormData) => void
+}) {
+  return (
+    <form action={action} className="flex items-center gap-3 border-t border-border pt-3">
+      <input type="hidden" name="provider" value={provider} />
+      <Button type="submit" size="sm" variant="outline">
+        <Plug className="size-4" /> Test connection
+      </Button>
+      <div className="flex-1">
+        <FormMessage state={state} />
+      </div>
+    </form>
+  )
+}
+
 export function IntegrationsPanel({
+  gitlab,
   github,
   jira,
 }: {
+  gitlab: IntegrationView
   github: IntegrationView
   jira: IntegrationView
 }) {
+  const [glSave, glSaveAction, glSaving] = useActionState(saveGitlab, undefined)
+  const [glTest, glTestAction] = useActionState(testConnection, undefined)
   const [ghSave, ghSaveAction, ghSaving] = useActionState(saveGithub, undefined)
   const [ghTest, ghTestAction] = useActionState(testConnection, undefined)
   const [jSave, jSaveAction, jSaving] = useActionState(saveJira, undefined)
@@ -36,6 +62,43 @@ export function IntegrationsPanel({
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
+      {/* GitLab — primary DORA metrics source */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-muted">
+                <Gitlab className="size-4" />
+              </div>
+              <CardTitle className="text-base">
+                GitLab <span className="text-xs font-normal text-muted-foreground">· primary DORA source</span>
+              </CardTitle>
+            </div>
+            <StatusBadge tone={STATUS_TONE[gitlab.status]}>{gitlab.status.toLowerCase()}</StatusBadge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form action={glSaveAction} className="space-y-4">
+            <Field label="Base URL" name="baseUrl" defaultValue={gitlab.config.baseUrl} placeholder="https://gitlab.com (or self-managed URL)" />
+            <Field label="Group / namespace (optional)" name="group" defaultValue={gitlab.config.group} placeholder="my-group" />
+            <Field
+              label="Access token (PAT / group token)"
+              name="token"
+              type="password"
+              placeholder={gitlab.hasToken ? "•••• stored — leave blank to keep" : "glpat-…"}
+            />
+            <FormMessage state={glSave} />
+            <Button type="submit" size="sm" disabled={glSaving}>
+              {glSaving ? "Saving…" : "Save GitLab"}
+            </Button>
+          </form>
+          <TestForm provider="GITLAB" state={glTest} action={glTestAction} />
+          {gitlab.lastError && !glTest && (
+            <p className="text-xs text-destructive">Last error: {gitlab.lastError}</p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* GitHub */}
       <Card>
         <CardHeader>
@@ -63,15 +126,7 @@ export function IntegrationsPanel({
               {ghSaving ? "Saving…" : "Save GitHub"}
             </Button>
           </form>
-          <form action={ghTestAction} className="flex items-center gap-3 border-t border-border pt-3">
-            <input type="hidden" name="provider" value="GITHUB" />
-            <Button type="submit" size="sm" variant="outline">
-              <Plug className="size-4" /> Test connection
-            </Button>
-            <div className="flex-1">
-              <FormMessage state={ghTest} />
-            </div>
-          </form>
+          <TestForm provider="GITHUB" state={ghTest} action={ghTestAction} />
           {github.lastError && !ghTest && (
             <p className="text-xs text-destructive">Last error: {github.lastError}</p>
           )}
@@ -106,15 +161,7 @@ export function IntegrationsPanel({
               {jSaving ? "Saving…" : "Save Jira"}
             </Button>
           </form>
-          <form action={jTestAction} className="flex items-center gap-3 border-t border-border pt-3">
-            <input type="hidden" name="provider" value="JIRA" />
-            <Button type="submit" size="sm" variant="outline">
-              <Plug className="size-4" /> Test connection
-            </Button>
-            <div className="flex-1">
-              <FormMessage state={jTest} />
-            </div>
-          </form>
+          <TestForm provider="JIRA" state={jTest} action={jTestAction} />
           {jira.lastError && !jTest && (
             <p className="text-xs text-destructive">Last error: {jira.lastError}</p>
           )}

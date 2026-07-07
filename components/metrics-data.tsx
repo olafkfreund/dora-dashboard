@@ -20,7 +20,12 @@ import {
 import { cn } from "@/lib/utils"
 
 export type Trend = "up" | "down" | "flat"
-export type Source = "GitHub" | "Jira" | "GitHub + Jira"
+export type Source =
+  | "GitLab"
+  | "GitHub"
+  | "Jira"
+  | "GitLab + Jira"
+  | "GitHub + Jira"
 
 export interface Metric {
   id: string
@@ -68,7 +73,7 @@ const base: Omit<Metric, "accent">[] = [
     icon: GitPullRequest,
     trend: "up",
     good: "up",
-    source: "GitHub",
+    source: "GitLab",
     target: "≥ 7/wk (Elite)",
     unit: "deploys / week",
     definition:
@@ -87,7 +92,7 @@ const base: Omit<Metric, "accent">[] = [
     icon: Timer,
     trend: "down",
     good: "down",
-    source: "GitHub + Jira",
+    source: "GitLab + Jira",
     target: "< 1 day (Elite)",
     unit: "days",
     definition:
@@ -106,7 +111,7 @@ const base: Omit<Metric, "accent">[] = [
     icon: AlertTriangle,
     trend: "down",
     good: "down",
-    source: "GitHub",
+    source: "GitLab",
     target: "≤ 15% (Elite)",
     unit: "%",
     definition:
@@ -125,7 +130,7 @@ const base: Omit<Metric, "accent">[] = [
     icon: Activity,
     trend: "down",
     good: "down",
-    source: "GitHub + Jira",
+    source: "GitLab + Jira",
     target: "< 1 hr (Elite)",
     unit: "hours",
     definition:
@@ -239,7 +244,7 @@ const base: Omit<Metric, "accent">[] = [
     icon: FlaskConical,
     trend: "up",
     good: "up",
-    source: "GitHub",
+    source: "GitLab",
     target: "≥ 80%",
     unit: "%",
     definition:
@@ -258,7 +263,7 @@ const base: Omit<Metric, "accent">[] = [
     icon: Bug,
     trend: "down",
     good: "down",
-    source: "GitHub + Jira",
+    source: "GitLab + Jira",
     target: "< 5%",
     unit: "%",
     definition:

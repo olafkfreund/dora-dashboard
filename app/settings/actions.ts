@@ -9,7 +9,7 @@ import { encryptSecret, decryptSecret } from "@/lib/crypto"
 import { writeAudit } from "@/lib/audit"
 import type { ActionState } from "@/lib/action-state"
 
-type IntegrationProvider = "GITHUB" | "JIRA"
+type IntegrationProvider = "GITHUB" | "GITLAB" | "JIRA"
 
 /** Upsert a single-row integration config, encrypting the token only when a new one is given. */
 async function upsertIntegration(
@@ -45,6 +45,17 @@ export async function saveGithub(_prev: ActionState, formData: FormData): Promis
   return { ok: true, message: "GitHub integration saved." }
 }
 
+export async function saveGitlab(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const admin = await requireAdmin()
+  const baseUrl = String(formData.get("baseUrl") ?? "").trim() || "https://gitlab.com"
+  const group = String(formData.get("group") ?? "").trim()
+  const token = String(formData.get("token") ?? "").trim()
+  await upsertIntegration(admin.id, "GITLAB", { baseUrl, group }, token)
+  await writeAudit(admin.id, "integration.save", "GITLAB", { baseUrl, group, tokenUpdated: Boolean(token) })
+  revalidatePath("/settings")
+  return { ok: true, message: "GitLab integration saved." }
+}
+
 export async function saveJira(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const admin = await requireAdmin()
   const baseUrl = String(formData.get("baseUrl") ?? "").trim()
@@ -73,14 +84,21 @@ export async function testConnection(_prev: ActionState, formData: FormData): Pr
   let detail = ""
   try {
     const token = decryptSecret(row.encryptedToken)
+    const cfg = (row.config ?? {}) as { baseUrl?: string; email?: string }
     if (provider === "GITHUB") {
       const res = await fetch("https://api.github.com/user", {
         headers: { Authorization: `Bearer ${token}`, "User-Agent": "dora-dashboard" },
       })
       ok = res.ok
       detail = ok ? `Connected as ${(await res.json()).login}` : `GitHub returned ${res.status}`
+    } else if (provider === "GITLAB") {
+      const base = (cfg.baseUrl || "https://gitlab.com").replace(/\/$/, "")
+      const res = await fetch(`${base}/api/v4/user`, {
+        headers: { "PRIVATE-TOKEN": token, Accept: "application/json" },
+      })
+      ok = res.ok
+      detail = ok ? `Connected as ${(await res.json()).username}` : `GitLab returned ${res.status}`
     } else {
-      const cfg = (row.config ?? {}) as { baseUrl?: string; email?: string }
       const base = (cfg.baseUrl ?? "").replace(/\/$/, "")
       const auth = Buffer.from(`${cfg.email}:${token}`).toString("base64")
       const res = await fetch(`${base}/rest/api/3/myself`, {

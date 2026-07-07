@@ -42,7 +42,8 @@ from the `shadcn-radix-nextjs` reference monorepo (shadcn/ui + Radix + Tailwind 
 - **Sessions:** Secure, httpOnly cookies; database session strategy for auditability
 
 ### Data Integrations
-- **GitHub:** Octokit REST/GraphQL — PRs, commits, deployments, workflow runs; ingestion via GitHub App or fine-grained PAT
+- **GitLab (primary DORA source):** GitLab REST API v4 (gitlab.com or self-managed) — merge requests, commits, pipelines/deployments, environments; ingestion via personal/group access token (`PRIVATE-TOKEN`). DORA-4 (deployment frequency, lead time, change failure rate, MTTR) is computed from GitLab CI/CD + deployments.
+- **GitHub (also supported):** Octokit REST/GraphQL — PRs, commits, deployments, workflow runs; ingestion via GitHub App or fine-grained PAT
 - **Jira:** Jira Cloud/Data Center REST API — issues, sprints, story points, status transitions, changelogs
 - **Scheduling:** Scheduled ingestion jobs (cron-style worker) with incremental sync + backfill
 

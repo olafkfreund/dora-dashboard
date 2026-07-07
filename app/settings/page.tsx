@@ -43,6 +43,7 @@ export default async function SettingsPage() {
     db.select().from(ssoProviders),
     headers(),
   ])
+  const gitlab = toIntegrationView(intRows.find((r) => r.provider === "GITLAB"))
   const github = toIntegrationView(intRows.find((r) => r.provider === "GITHUB"))
   const jira = toIntegrationView(intRows.find((r) => r.provider === "JIRA"))
   const entra = toSsoView(ssoRows.find((r) => r.provider === "ENTRA"))
@@ -75,7 +76,7 @@ export default async function SettingsPage() {
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Data sources
           </h2>
-          <IntegrationsPanel github={github} jira={jira} />
+          <IntegrationsPanel gitlab={gitlab} github={github} jira={jira} />
         </section>
       </main>
     </div>
