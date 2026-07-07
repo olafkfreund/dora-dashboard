@@ -36,11 +36,11 @@ autoscaling:
 
 # Bundled Postgres for this environment. For a hardened prod install, set
 # postgres.enabled=false and secrets.databaseUrl to an RDS connection string.
+# Managed RDS PostgreSQL (durable — survives pod restarts). The connection string
+# (with password) is passed at deploy time via --set secrets.databaseUrl and then
+# preserved in the release Secret across upgrades — it is never committed here.
 postgres:
-  enabled: true
-  # Cluster has no EBS CSI driver, so use ephemeral storage for now.
-  # For persistence: install the aws-ebs-csi-driver addon and set this true
-  # (storageClass: gp2), or use managed RDS (postgres.enabled=false).
+  enabled: false
   persistence:
     enabled: false
 
@@ -53,7 +53,8 @@ migrate:
   enabled: false
   initContainer: true
 
-# Pod cap is full — terminate the old pod before creating the new one on rollout.
+# Zero-downtime rollout: with a 2nd node there is room to bring the new pod up
+# (Ready) before the old one is removed.
 updateStrategy:
-  maxSurge: 0
-  maxUnavailable: 1
+  maxSurge: 1
+  maxUnavailable: 0
