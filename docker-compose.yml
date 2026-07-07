@@ -1,0 +1,58 @@
+# DORA Dashboard — local / small-footprint deployment.
+#
+#   export AUTH_SECRET="$(openssl rand -base64 32)"
+#   export APP_ENCRYPTION_KEY="$(openssl rand -base64 32)"
+#   docker compose up -d
+#
+# App: http://localhost:8191  (first-run admin password is printed by the
+# `migrate` service — `docker compose logs migrate`).
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: dora
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dora}
+      POSTGRES_DB: dora
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dora -d dora"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # One-shot: run migrations + bootstrap the admin (idempotent), then exit.
+  migrate:
+    image: ${IMAGE:-ghcr.io/olafkfreund/dora-dashboard:latest}
+    command: ["/bin/sh", "-c", "node scripts/migrate.mjs && node scripts/seed.mjs"]
+    environment:
+      DATABASE_URL: postgresql://dora:${POSTGRES_PASSWORD:-dora}@db:5432/dora
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@dora.local}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    image: ${IMAGE:-ghcr.io/olafkfreund/dora-dashboard:latest}
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://dora:${POSTGRES_PASSWORD:-dora}@db:5432/dora
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY}
+      AUTH_TRUST_HOST: "true"
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@dora.local}
+    ports:
+      - "8191:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  pgdata:
