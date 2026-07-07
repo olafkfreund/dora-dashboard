@@ -9,7 +9,7 @@ export function AppHeader({
   active,
 }: {
   user: { name?: string | null; email?: string | null; role: "ADMIN" | "LEAD" | "VIEWER" }
-  active?: "dashboard" | "settings" | "users"
+  active?: "dashboard" | "settings" | "users" | "audit"
 }) {
   const isAdmin = user.role === "ADMIN"
   const link = (href: string, label: string, key: string) => (
@@ -39,6 +39,7 @@ export function AppHeader({
             {link("/", "Dashboard", "dashboard")}
             {isAdmin && link("/settings", "Settings", "settings")}
             {isAdmin && link("/users", "Users", "users")}
+            {isAdmin && link("/audit", "Audit", "audit")}
           </nav>
         </div>
         <div className="flex items-center gap-2">
