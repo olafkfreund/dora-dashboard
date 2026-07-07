@@ -29,6 +29,13 @@
       "when": 1783424888766,
       "tag": "0003_glossy_karen_page",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783426269059,
+      "tag": "0004_numerous_luke_cage",
+      "breakpoints": true
     }
   ]
 }

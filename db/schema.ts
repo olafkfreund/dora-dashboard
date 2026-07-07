@@ -145,11 +145,13 @@ export const syncState = pgTable("sync_state", {
 })
 
 // --- Audit log ---
+// actorId is intentionally NOT a foreign key: an audit trail must retain the
+// acting user's id even if that user is later removed (append-only / tamper-evident).
 export const auditLogs = pgTable("audit_log", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  actorId: text("actorId").references(() => users.id, { onDelete: "set null" }),
+  actorId: text("actorId"),
   action: text("action").notNull(),
   target: text("target"),
   meta: jsonb("meta").notNull().default({}),
