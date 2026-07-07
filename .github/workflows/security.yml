@@ -1,0 +1,88 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1" # weekly, Monday 03:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  # Filesystem/dependency vulnerability scan → SARIF into the Security tab.
+  trivy-fs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+  # Dependency audit (informational).
+  npm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --include=dev --no-audit --no-fund
+      - name: npm audit (high+)
+        run: npm audit --audit-level=high || true
+
+  # OWASP ZAP baseline (passive) against the running app.
+  zap-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t dora-dashboard:ci .
+
+      - name: Generate runtime secrets
+        run: |
+          {
+            echo "IMAGE=dora-dashboard:ci"
+            echo "AUTH_SECRET=$(openssl rand -base64 32)"
+            echo "APP_ENCRYPTION_KEY=$(openssl rand -base64 32)"
+          } >> "$GITHUB_ENV"
+
+      - name: Start app (compose)
+        run: |
+          docker compose up -d
+          echo "Waiting for the app…"
+          for _ in $(seq 1 40); do
+            if curl -sf http://localhost:8191/login >/dev/null; then echo "up"; break; fi
+            sleep 3
+          done
+          curl -sf http://localhost:8191/login >/dev/null || { docker compose logs; exit 1; }
+
+      - name: OWASP ZAP baseline scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: http://localhost:8191/login
+          cmd_options: "-a -I" # include alpha passive rules; do not fail the build on warnings
+          allow_issue_writing: false
+          artifact_name: zap-baseline-report
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
