@@ -135,6 +135,10 @@ export const gitlabMergeRequests = pgTable("gitlab_merge_request", {
   projectPath: text("projectPath"),
   createdAt: timestamp("createdAt", { mode: "date" }),
   mergedAt: timestamp("mergedAt", { mode: "date" }),
+  // Merge commit SHA (links an MR to the deployment that shipped it) + the MR's
+  // first commit date — for MR-based Lead Time for Changes.
+  mergeCommitSha: text("mergeCommitSha"),
+  firstCommitAt: timestamp("firstCommitAt", { mode: "date" }),
   ingestedAt: timestamp("ingestedAt", { mode: "date" }).notNull().defaultNow(),
 })
 

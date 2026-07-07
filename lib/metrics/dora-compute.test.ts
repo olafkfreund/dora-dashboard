@@ -50,6 +50,23 @@ describe("computeDoraFromRows", () => {
     expect(r.leadTime?.value).toBe("2.0 days")
   })
 
+  it("Lead Time prefers the MR's first commit when deploy sha matches the MR merge sha", () => {
+    // deploy of merge commit "abc", finished 5 days after; committedAt is deploy-time (0d).
+    const dep: DeploymentRow = {
+      projectId: 1,
+      status: "success",
+      finishedAt: new Date(NOW.getTime() - 1 * DAY),
+      committedAt: new Date(NOW.getTime() - 1.5 * DAY), // deploy-commit method: 0.5 day = 12 hrs
+      sha: "abc",
+    }
+    const mrs = [{ mergeCommitSha: "abc", firstCommitAt: new Date(NOW.getTime() - 6 * DAY) }] // 5-day feature
+    const r = computeDoraFromRows([dep], NOW, { mrs, leadTimeMode: "mr" })
+    expect(r.leadTime?.value).toBe("5.0 days")
+    // gitops mode ignores the MR → falls back to the deployed-commit date
+    const g = computeDoraFromRows([dep], NOW, { mrs, leadTimeMode: "gitops" })
+    expect(g.leadTime?.value).toBe("12.0 hrs")
+  })
+
   it("computes MTTR as failed→next-success recovery time (hours)", () => {
     // one project: failed, then success 3h later
     const failed = dep(1, "failed", 10)

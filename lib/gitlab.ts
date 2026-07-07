@@ -96,6 +96,27 @@ export async function getCommitDate(
   }
 }
 
+/** Date of an MR's first (oldest) commit — for MR-based Lead Time for Changes. */
+export async function getMrFirstCommitDate(
+  cfg: GitlabConfig,
+  projectId: number,
+  iid: number
+): Promise<Date | null> {
+  try {
+    // GitLab returns MR commits newest-first; the last entry is the first commit.
+    const commits = await gitlabGetOne<Array<{ authored_date?: string; created_at?: string }>>(
+      cfg,
+      `/projects/${projectId}/merge_requests/${iid}/commits?per_page=100`
+    )
+    if (!Array.isArray(commits) || commits.length === 0) return null
+    const first = commits[commits.length - 1]
+    const d = first.authored_date || first.created_at
+    return d ? new Date(d) : null
+  } catch {
+    return null
+  }
+}
+
 /** Latest CI pipeline coverage for a project's default branch (for Test Automation Coverage). */
 export async function getLatestCoverage(
   cfg: GitlabConfig,

@@ -22,6 +22,19 @@ export interface DeploymentRow {
   status: string | null
   finishedAt: Date | null
   committedAt?: Date | null
+  sha?: string | null
+}
+
+export interface MrRow {
+  mergeCommitSha: string | null
+  firstCommitAt: Date | null
+}
+
+export interface DoraOpts {
+  /** Merged MRs, for MR-first-commit Lead Time correlation. */
+  mrs?: MrRow[]
+  /** "mr" = feature MR's first commit → prod (default, falls back to deployed-commit date); "gitops" = deployed-commit date only. */
+  leadTimeMode?: "mr" | "gitops"
 }
 
 export const WEEKS = 8
@@ -58,11 +71,20 @@ function weekIndex(d: Date, since: Date): number {
   return Math.min(WEEKS - 1, Math.floor((d.getTime() - since.getTime()) / (7 * DAY)))
 }
 
-export function computeDoraFromRows(rows: DeploymentRow[], now = new Date()): DoraResult {
+export function computeDoraFromRows(rows: DeploymentRow[], now = new Date(), opts: DoraOpts = {}): DoraResult {
   const since = new Date(now.getTime() - WEEKS * 7 * DAY)
   const inWindow = rows.filter((r) => r.finishedAt && r.finishedAt >= since)
   if (inWindow.length === 0) {
     return { hasData: false, deploymentsTotal: 0, windowWeeks: WEEKS }
+  }
+
+  // Map deployed commit SHA → the MR's first-commit date (for MR-based lead time).
+  const useMr = (opts.leadTimeMode ?? "mr") === "mr"
+  const firstCommitBySha = new Map<string, Date>()
+  if (useMr) {
+    for (const mr of opts.mrs ?? []) {
+      if (mr.mergeCommitSha && mr.firstCommitAt) firstCommitBySha.set(mr.mergeCommitSha, mr.firstCommitAt)
+    }
   }
 
   const success = new Array(WEEKS).fill(0)
@@ -79,12 +101,17 @@ export function computeDoraFromRows(rows: DeploymentRow[], now = new Date()): Do
     if (r.status === SUCCESS) success[idx]++
     else if (r.status === FAILED) failed[idx]++
 
-    // Lead Time: successful deploy's finish − deployed commit's date.
-    if (r.status === SUCCESS && r.committedAt) {
-      const lead = r.finishedAt.getTime() - r.committedAt.getTime()
-      if (lead > 0) {
-        leadByWeek[idx].push(lead)
-        leadAll.push(lead)
+    // Lead Time: prefer the feature MR's first commit (deploy sha == MR merge sha);
+    // otherwise fall back to the deployed commit's own date.
+    if (r.status === SUCCESS) {
+      const mrStart = r.sha ? firstCommitBySha.get(r.sha) : undefined
+      const startAt = mrStart ?? r.committedAt
+      if (startAt) {
+        const lead = r.finishedAt.getTime() - startAt.getTime()
+        if (lead > 0) {
+          leadByWeek[idx].push(lead)
+          leadAll.push(lead)
+        }
       }
     }
   }

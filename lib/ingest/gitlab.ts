@@ -5,6 +5,7 @@ import { gitlabDeployments, gitlabMergeRequests, gitlabCoverage, syncState, inte
 import {
   getGitlabConfig,
   getCommitDate,
+  getMrFirstCommitDate,
   getLatestCoverage,
   gitlabPaginate,
   listProjects,
@@ -40,6 +41,7 @@ interface GitlabMergeRequest {
   project_id: number
   created_at?: string
   merged_at?: string
+  merge_commit_sha?: string | null
 }
 
 function toDate(s?: string | null): Date | null {
@@ -128,11 +130,12 @@ async function syncMergeRequests(cfg: GitlabConfig, projects: GitlabProject[]): 
           projectPath: project.path_with_namespace,
           createdAt: toDate(mr.created_at),
           mergedAt: toDate(mr.merged_at),
+          mergeCommitSha: mr.merge_commit_sha ?? null,
           ingestedAt: new Date(),
         })
         .onConflictDoUpdate({
           target: gitlabMergeRequests.id,
-          set: { mergedAt: toDate(mr.merged_at), ingestedAt: new Date() },
+          set: { mergedAt: toDate(mr.merged_at), mergeCommitSha: mr.merge_commit_sha ?? null, ingestedAt: new Date() },
         })
       count++
       if (mr.merged_at && mr.merged_at > maxUpdated) maxUpdated = mr.merged_at
@@ -155,6 +158,24 @@ async function backfillCommitDates(cfg: GitlabConfig): Promise<number> {
     const committedAt = await getCommitDate(cfg, r.projectId, r.sha)
     if (committedAt) {
       await db.update(gitlabDeployments).set({ committedAt }).where(eq(gitlabDeployments.id, r.id))
+      count++
+    }
+  }
+  return count
+}
+
+/** Fill firstCommitAt for merged MRs (their first commit's date) — for MR-based Lead Time. */
+async function backfillMrFirstCommit(cfg: GitlabConfig): Promise<number> {
+  const rows = await db
+    .select({ id: gitlabMergeRequests.id, projectId: gitlabMergeRequests.projectId, iid: gitlabMergeRequests.iid })
+    .from(gitlabMergeRequests)
+    .where(and(isNull(gitlabMergeRequests.firstCommitAt), isNotNull(gitlabMergeRequests.mergedAt)))
+    .limit(COMMIT_BACKFILL_LIMIT)
+  let count = 0
+  for (const r of rows) {
+    const firstCommitAt = await getMrFirstCommitDate(cfg, r.projectId, r.iid)
+    if (firstCommitAt) {
+      await db.update(gitlabMergeRequests).set({ firstCommitAt }).where(eq(gitlabMergeRequests.id, r.id))
       count++
     }
   }
@@ -194,6 +215,7 @@ export async function syncGitlab(): Promise<SyncResult> {
     const deployments = await syncDeployments(cfg, projects)
     const mergeRequests = await syncMergeRequests(cfg, projects)
     const commitsBackfilled = await backfillCommitDates(cfg)
+    await backfillMrFirstCommit(cfg)
     const coverage = await syncCoverage(cfg, projects)
     await db
       .update(integrations)
