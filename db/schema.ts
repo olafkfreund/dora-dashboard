@@ -105,6 +105,45 @@ export const ssoProviders = pgTable("sso_provider", {
   updatedById: text("updatedById"),
 })
 
+// --- Ingested delivery data (GitLab). Raw events for DORA computation. ---
+export const gitlabDeployments = pgTable("gitlab_deployment", {
+  // `${projectId}:${deploymentId}`
+  id: text("id").primaryKey(),
+  projectId: integer("projectId").notNull(),
+  deploymentId: integer("deploymentId").notNull(),
+  projectPath: text("projectPath"),
+  environment: text("environment"),
+  status: text("status"), // success | failed | canceled | running | blocked
+  ref: text("ref"),
+  sha: text("sha"),
+  createdAt: timestamp("createdAt", { mode: "date" }),
+  finishedAt: timestamp("finishedAt", { mode: "date" }),
+  ingestedAt: timestamp("ingestedAt", { mode: "date" }).notNull().defaultNow(),
+})
+
+export const gitlabMergeRequests = pgTable("gitlab_merge_request", {
+  // `${projectId}:${iid}`
+  id: text("id").primaryKey(),
+  projectId: integer("projectId").notNull(),
+  iid: integer("iid").notNull(),
+  projectPath: text("projectPath"),
+  createdAt: timestamp("createdAt", { mode: "date" }),
+  mergedAt: timestamp("mergedAt", { mode: "date" }),
+  ingestedAt: timestamp("ingestedAt", { mode: "date" }).notNull().defaultNow(),
+})
+
+// Per-provider/entity incremental-sync bookkeeping.
+export const syncState = pgTable("sync_state", {
+  // `${provider}:${entity}`
+  id: text("id").primaryKey(),
+  provider: text("provider").notNull(),
+  entity: text("entity").notNull(),
+  cursor: text("cursor"), // last processed updated_at (ISO)
+  lastSyncAt: timestamp("lastSyncAt", { mode: "date" }),
+  lastError: text("lastError"),
+  itemCount: integer("itemCount").notNull().default(0),
+})
+
 // --- Audit log ---
 export const auditLogs = pgTable("audit_log", {
   id: text("id")

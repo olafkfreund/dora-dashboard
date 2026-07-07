@@ -34,6 +34,28 @@ const VIEWS: { id: ViewMode; label: string; icon: React.ComponentType<{ classNam
   { id: "modern", label: "Modern", icon: Sparkles },
 ]
 
+export type MetricOverride = {
+  value: string
+  sub: string
+  history: number[]
+  trend?: "up" | "down" | "flat"
+}
+
+type ViewProps = {
+  items: Metric[]
+  liveIds: Set<string>
+  onOpen: (id: string) => void
+}
+
+function LiveDot() {
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[color:var(--success)]">
+      <span className="size-1.5 rounded-full bg-[color:var(--success)]" />
+      live
+    </span>
+  )
+}
+
 function percentOf(m: Metric): number {
   const n = parseFloat(m.value)
   return isNaN(n) ? 0 : n
@@ -55,14 +77,14 @@ function clickableProps(onOpen: () => void) {
 }
 
 /* ---------------- View 1: Cards (original) ---------------- */
-function CardsView({ onOpen }: { onOpen: (id: string) => void }) {
+function CardsView({ items, liveIds, onOpen }: ViewProps) {
   return (
     <>
       {groups.map((group) => (
         <section key={group} className="mb-10">
           <GroupHeading group={group} />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {metrics
+            {items
               .filter((m) => m.group === group)
               .map((m) => {
                 const Icon = m.icon
@@ -77,7 +99,7 @@ function CardsView({ onOpen }: { onOpen: (id: string) => void }) {
                         <div className="flex size-9 items-center justify-center rounded-lg bg-muted text-foreground">
                           <Icon className="size-5" />
                         </div>
-                        <TrendBadge trend={m.trend} good={m.good} />
+                        <div className="flex items-center gap-2">{liveIds.has(m.id) && <LiveDot />}<TrendBadge trend={m.trend} good={m.good} /></div>
                       </div>
                       <CardTitle className="mt-3 text-2xl">{m.value}</CardTitle>
                       <CardDescription>{m.label}</CardDescription>
@@ -99,14 +121,14 @@ function CardsView({ onOpen }: { onOpen: (id: string) => void }) {
 }
 
 /* ---------------- View 2: Charts (colored) ---------------- */
-function ChartsView({ onOpen }: { onOpen: (id: string) => void }) {
+function ChartsView({ items, liveIds, onOpen }: ViewProps) {
   return (
     <>
       {groups.map((group) => (
         <section key={group} className="mb-10">
           <GroupHeading group={group} />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {metrics
+            {items
               .filter((m) => m.group === group)
               .map((m) => {
                 const Icon = m.icon
@@ -128,7 +150,7 @@ function ChartsView({ onOpen }: { onOpen: (id: string) => void }) {
                           </div>
                           <CardDescription className="text-foreground">{m.label}</CardDescription>
                         </div>
-                        <TrendBadge trend={m.trend} good={m.good} />
+                        <div className="flex items-center gap-2">{liveIds.has(m.id) && <LiveDot />}<TrendBadge trend={m.trend} good={m.good} /></div>
                       </div>
                       <div className="mt-2 flex items-baseline gap-2">
                         <CardTitle className="text-2xl">{m.value}</CardTitle>
@@ -153,14 +175,14 @@ function ChartsView({ onOpen }: { onOpen: (id: string) => void }) {
 }
 
 /* ---------------- View 3: Modern (colorful + animated) ---------------- */
-function ModernView({ onOpen }: { onOpen: (id: string) => void }) {
+function ModernView({ items, liveIds, onOpen }: ViewProps) {
   return (
     <>
       {groups.map((group) => (
         <section key={group} className="mb-10">
           <GroupHeading group={group} />
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            {metrics
+            {items
               .filter((m) => m.group === group)
               .map((m, i) => {
                 const Icon = m.icon
@@ -191,6 +213,8 @@ function ModernView({ onOpen }: { onOpen: (id: string) => void }) {
                           <p className="text-[11px] text-muted-foreground">{m.group}</p>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                      {liveIds.has(m.id) && <LiveDot />}
                       <span
                         className={cn(
                           "rounded-full px-2 py-0.5 text-[10px] font-semibold",
@@ -201,6 +225,7 @@ function ModernView({ onOpen }: { onOpen: (id: string) => void }) {
                       >
                         {good ? "▲ healthy" : "▼ watch"}
                       </span>
+                      </div>
                     </div>
 
                     <div className="relative mt-4 flex items-center justify-between gap-3">
@@ -247,10 +272,27 @@ function GroupHeading({ group }: { group: string }) {
   )
 }
 
-export function MetricExplorer() {
+export function MetricExplorer({
+  overrides,
+}: {
+  overrides?: Record<string, MetricOverride>
+}) {
   const [view, setView] = React.useState<ViewMode>("cards")
   const [openId, setOpenId] = React.useState<string | null>(null)
-  const active = metrics.find((m) => m.id === openId) ?? null
+
+  // Apply live overrides (real GitLab-computed metrics) onto the sample set.
+  const items = React.useMemo<Metric[]>(
+    () =>
+      metrics.map((m) => {
+        const o = overrides?.[m.id]
+        return o
+          ? { ...m, value: o.value, sub: o.sub, history: o.history, trend: o.trend ?? m.trend }
+          : m
+      }),
+    [overrides]
+  )
+  const liveIds = React.useMemo(() => new Set(Object.keys(overrides ?? {})), [overrides])
+  const active = items.find((m) => m.id === openId) ?? null
 
   // Deep-link support (?view=&metric=) takes precedence over persisted view.
   React.useEffect(() => {
@@ -310,9 +352,9 @@ export function MetricExplorer() {
         </div>
       </div>
 
-      {view === "cards" && <CardsView onOpen={onOpen} />}
-      {view === "charts" && <ChartsView onOpen={onOpen} />}
-      {view === "modern" && <ModernView onOpen={onOpen} />}
+      {view === "cards" && <CardsView items={items} liveIds={liveIds} onOpen={onOpen} />}
+      {view === "charts" && <ChartsView items={items} liveIds={liveIds} onOpen={onOpen} />}
+      {view === "modern" && <ModernView items={items} liveIds={liveIds} onOpen={onOpen} />}
 
       {active && <MetricDialog metric={active} onClose={() => setOpenId(null)} />}
     </>

@@ -1,13 +1,14 @@
 "use client"
 
 import { useActionState } from "react"
-import { Github, Gitlab, ListChecks, Plug } from "lucide-react"
+import { Github, Gitlab, ListChecks, Plug, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field } from "@/components/ui/labeled-input"
 import { FormMessage } from "@/components/ui/form-message"
 import { StatusBadge, type BadgeTone } from "@/components/ui/status-badge"
 import { saveGithub, saveGitlab, saveJira, testConnection } from "./actions"
+import { syncGitlabAction } from "./gitlab-actions"
 
 export interface IntegrationView {
   status: "UNCONFIGURED" | "CONNECTED" | "ERROR"
@@ -48,13 +49,16 @@ export function IntegrationsPanel({
   gitlab,
   github,
   jira,
+  gitlabLastSync,
 }: {
   gitlab: IntegrationView
   github: IntegrationView
   jira: IntegrationView
+  gitlabLastSync?: string | null
 }) {
   const [glSave, glSaveAction, glSaving] = useActionState(saveGitlab, undefined)
   const [glTest, glTestAction] = useActionState(testConnection, undefined)
+  const [glSync, glSyncAction, glSyncing] = useActionState(syncGitlabAction, undefined)
   const [ghSave, ghSaveAction, ghSaving] = useActionState(saveGithub, undefined)
   const [ghTest, ghTestAction] = useActionState(testConnection, undefined)
   const [jSave, jSaveAction, jSaving] = useActionState(saveJira, undefined)
@@ -93,7 +97,22 @@ export function IntegrationsPanel({
             </Button>
           </form>
           <TestForm provider="GITLAB" state={glTest} action={glTestAction} />
-          {gitlab.lastError && !glTest && (
+          <form action={glSyncAction} className="flex items-center gap-3 border-t border-border pt-3">
+            <Button type="submit" size="sm" variant="outline" disabled={glSyncing}>
+              <RefreshCw className={glSyncing ? "size-4 animate-spin" : "size-4"} />
+              {glSyncing ? "Syncing…" : "Sync now"}
+            </Button>
+            <div className="flex-1">
+              {glSync ? (
+                <FormMessage state={glSync} />
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  {gitlabLastSync ? `Last sync: ${gitlabLastSync}` : "Never synced — pulls deployments to compute DORA."}
+                </span>
+              )}
+            </div>
+          </form>
+          {gitlab.lastError && !glTest && !glSync && (
             <p className="text-xs text-destructive">Last error: {gitlab.lastError}</p>
           )}
         </CardContent>
