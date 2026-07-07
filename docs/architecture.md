@@ -118,27 +118,45 @@ flowchart TB
 </table>
 </div>
 
-## Security mechanisms in place
+## Security mechanisms (on Azure PaaS)
+
+<p>The portal is designed to run as a managed container on <strong>Azure App Service</strong> or
+<strong>Azure Container Apps</strong> — no Kubernetes required. The controls map cleanly onto
+Azure PaaS primitives (Key Vault, Managed Identity, Private Endpoints, managed TLS):</p>
 
 <ul>
-<li><strong>Transport:</strong> TLS 1.3 with HSTS; a strict Content-Security-Policy,
-<code>X-Frame-Options: DENY</code>, <code>nosniff</code>, and a locked-down Permissions-Policy.</li>
+<li><strong>Transport:</strong> <strong>free managed TLS certificates</strong> (auto-renewed) on
+Container Apps / App Service, HTTPS-only; the app adds HSTS, a strict Content-Security-Policy,
+<code>X-Frame-Options: DENY</code>, <code>nosniff</code> and a locked-down Permissions-Policy.</li>
 <li><strong>Authentication:</strong> Auth.js (NextAuth) — local username/password (bcrypt) and
-Azure Entra ID SSO (OIDC); secure <code>HttpOnly</code>/<code>Secure</code> cookies.</li>
+<strong>Azure Entra ID SSO</strong> (OIDC); secure <code>HttpOnly</code>/<code>Secure</code>
+cookies. App Service "Easy Auth" can front the app as an extra layer if desired.</li>
 <li><strong>Authorisation:</strong> default-deny middleware; role-based access (Admin/Lead/Viewer)
 enforced server-side on every privileged action.</li>
 <li><strong>Secrets:</strong> integration tokens and SSO client secrets are encrypted with
-<strong>AES-256-GCM</strong> before storage and never returned to the browser; Kubernetes Secrets
-are encrypted at rest with <strong>KMS</strong>.</li>
-<li><strong>Isolation:</strong> PostgreSQL is cluster-internal only (never exposed); a
-NetworkPolicy restricts DB access to the app’s own pods; no third-party data egress.</li>
+<strong>AES-256-GCM</strong> before storage and never returned to the browser. Platform secrets
+(DB URL, session/encryption keys) live in <strong>Azure Key Vault</strong> and are read at runtime
+via <strong>Managed Identity</strong> (App Service Key Vault references / Container Apps secrets) —
+never baked into the image or config.</li>
+<li><strong>Network isolation:</strong> <strong>Azure Database for PostgreSQL Flexible Server</strong>
+is reached over <strong>VNet integration + a Private Endpoint</strong> with public access disabled —
+the database has no internet exposure; no third-party data egress.</li>
+<li><strong>Identity, not credentials:</strong> a <strong>user-assigned Managed Identity</strong>
+handles container-registry pull (ACR), Key Vault access, and optionally Entra authentication to
+PostgreSQL — so there are no stored infrastructure passwords.</li>
 <li><strong>Least privilege:</strong> the GitLab token needs only <code>read_api</code> (or the
-equivalent fine-grained group read); the app only reads from sources.</li>
-<li><strong>Audit:</strong> every privileged action (sign-in, user/role change, integration save,
-sync) is written to an append-only audit log.</li>
-<li><strong>Supply chain:</strong> non-root, minimal, capability-dropped container; image scanning,
-SBOM and signing in CI (see the repo).</li>
+equivalent fine-grained group read); the app only ever reads from sources.</li>
+<li><strong>Audit &amp; monitoring:</strong> every privileged action (sign-in, user/role change,
+integration save, sync) is written to an append-only audit log; container logs and metrics stream
+to <strong>Azure Monitor / Log Analytics</strong>.</li>
+<li><strong>Supply chain:</strong> non-root, minimal, capability-dropped container image; scanning
+with <strong>Microsoft Defender for Containers</strong> (or Trivy in CI), plus SBOM and image
+signing in the pipeline.</li>
 </ul>
+
+<div class="note"><strong>Kubernetes is optional.</strong> The same image also ships with a Helm
+chart for AKS/Kubernetes, but Azure App Service and Container Apps are the recommended,
+lower-ops path for most customers. See <a href="{{ '/azure/' | relative_url }}">Deploy to Azure</a>.</div>
 
 ## Component overview
 
@@ -151,12 +169,13 @@ SBOM and signing in CI (see the repo).</li>
 <tr><td>Data layer</td><td>Drizzle ORM · postgres.js · PostgreSQL 16</td><td>Raw events, computed data, users, audit</td></tr>
 <tr><td>Auth</td><td>Auth.js (NextAuth v5)</td><td>Local + Entra ID SSO, RBAC, sessions</td></tr>
 <tr><td>Ingestion</td><td>GitLab REST v4 (Jira REST)</td><td>Deployments, MRs, commits → Postgres</td></tr>
-<tr><td>Deployment</td><td>Docker · Helm · Kubernetes (EKS)</td><td>Hardened image, ingress-nginx, cert-manager</td></tr>
+<tr><td>Deployment</td><td>Azure Container Apps / App Service (Docker) · Helm/AKS optional</td><td>Managed TLS, Key Vault, Managed Identity, Private Endpoint</td></tr>
 </tbody>
 </table>
 </div>
 
-<p><a href="{{ '/install/' | relative_url }}">→ Installation &amp; configuration (Helm)</a> ·
+<p><a href="{{ '/azure/' | relative_url }}">→ Deploy to Azure (App Service / Container Apps)</a> ·
+<a href="{{ '/install/' | relative_url }}">→ Kubernetes / Helm</a> ·
 <a href="{{ '/metrics/' | relative_url }}">→ Metrics guide</a></p>
 
 </article>

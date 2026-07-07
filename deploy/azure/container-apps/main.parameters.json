@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "name": { "value": "dora" },
+    "location": { "value": "westeurope" },
+    "image": { "value": "ghcr.io/olafkfreund/dora-dashboard:latest" },
+    "deployPostgres": { "value": true },
+    "postgresAdminPassword": { "value": "REPLACE-with-a-strong-password" },
+    "authSecret": { "value": "REPLACE-openssl-rand-base64-32" },
+    "appEncryptionKey": { "value": "REPLACE-openssl-rand-base64-32" },
+    "adminEmail": { "value": "admin@yourcompany.com" }
+  }
+}
