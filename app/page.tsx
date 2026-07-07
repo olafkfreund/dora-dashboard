@@ -2,12 +2,14 @@ import { requireUser } from "@/lib/auth-helpers"
 import { AppHeader } from "@/components/app-header"
 import { MetricExplorer, type MetricOverride } from "@/components/metric-explorer"
 import { computeDora } from "@/lib/metrics/dora"
+import { computeJiraMetrics } from "@/lib/metrics/jira-metrics"
 
 export default async function Home() {
   const user = await requireUser()
 
-  // Real DORA-4 from ingested GitLab deployments (falls back to sample if none).
-  let overrides: Record<string, MetricOverride> = {}
+  // Real metrics from ingested data (fall back to sample where none exists).
+  const overrides: Record<string, MetricOverride> = {}
+  // DORA-4 from GitLab deployments.
   try {
     const dora = await computeDora()
     if (dora.hasData) {
@@ -17,7 +19,18 @@ export default async function Home() {
       if (dora.mttr) overrides["mttr"] = dora.mttr
     }
   } catch {
-    overrides = {}
+    // ingestion not ready — keep sample DORA metrics
+  }
+  // Flow + Velocity from Jira.
+  try {
+    const { flow, velocity } = await computeJiraMetrics()
+    if (flow.cycleTime) overrides["cycle-time"] = flow.cycleTime
+    if (flow.workItemAge) overrides["work-item-age"] = flow.workItemAge
+    if (flow.blockedTime) overrides["blocked-time"] = flow.blockedTime
+    if (velocity.averageVelocity) overrides["average-velocity"] = velocity.averageVelocity
+    if (velocity.deliveryPredictability) overrides["delivery-predictability"] = velocity.deliveryPredictability
+  } catch {
+    // Jira not connected — keep sample flow/velocity metrics
   }
   const live = Object.keys(overrides).length > 0
 

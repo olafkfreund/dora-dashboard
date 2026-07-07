@@ -113,6 +113,18 @@ seconds, this reads near-zero. For true incident MTTR, record incidents in GitLa
 
 ## Flow metrics (from Jira)
 
+<div class="note">
+<strong>How the Jira flow &amp; velocity values are collected.</strong> The Jira ingestion
+(<em>Settings → Jira → Sync</em>) pulls issues with their <strong>changelog</strong> and the boards'
+<strong>sprints</strong>. From each issue's changelog we derive three timing signals and store them:
+<code>inProgressAt</code> (first transition out of the initial status), <code>resolvedAt</code>
+(resolution date), and <code>blockedSeconds</code> (total time spent in a Blocked/On-hold status).
+Story points and the sprint are read from the issue's custom fields (auto-detected). The metrics
+below are then computed from that stored data — they go <em>live</em> the moment a Jira token is
+connected and a sync has run. Custom Story-Points/Sprint fields vary per Jira instance, so the
+ingestor detects them by name.
+</div>
+
 <div class="metric-doc" markdown="0">
 <h3>Cycle Time <span class="tag-jira">Jira</span></h3>
 <p class="src">Source: Jira status transitions</p>
