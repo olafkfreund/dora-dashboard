@@ -4,7 +4,7 @@ title: Installation & Configuration · DORA Dashboard
 description: Install the portal in the cloud with Helm — prerequisites, chart values, TLS, secrets, GitLab configuration, scaling, upgrades and troubleshooting.
 ---
 
-<article class="doc">
+<article class="doc" markdown="1">
 
 <p class="eyebrow">Documentation</p>
 

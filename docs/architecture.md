@@ -4,7 +4,7 @@ title: Architecture & Data Flow · DORA Dashboard
 description: How data flows from GitLab and Jira into the dashboard, and who can access what — with diagrams.
 ---
 
-<article class="doc">
+<article class="doc" markdown="1">
 
 <p class="eyebrow">Documentation</p>
 

@@ -4,7 +4,7 @@ title: Metrics Guide · DORA Dashboard
 description: What each metric measures, how it is collected from GitLab and Jira, how it is calculated, and a real-life scenario.
 ---
 
-<article class="doc">
+<article class="doc" markdown="1">
 
 <p class="eyebrow">Documentation</p>
 
