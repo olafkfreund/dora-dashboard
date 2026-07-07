@@ -1,0 +1,30 @@
+{{- if and .Values.networkPolicy.enabled .Values.postgres.enabled -}}
+# Restrict access to the bundled PostgreSQL to the app's own web/migrate pods.
+# (No-op unless the CNI enforces NetworkPolicy, but safe to apply.)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "dora.postgresName" . }}
+  labels:
+    {{- include "dora.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "dora.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "dora.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: web
+        - podSelector:
+            matchLabels:
+              {{- include "dora.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: migrate
+      ports:
+        - protocol: TCP
+          port: 5432
+{{- end }}

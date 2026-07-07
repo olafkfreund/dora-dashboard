@@ -101,10 +101,17 @@ updateStrategy:
   maxSurge: 1
   maxUnavailable: 0
 
+# Restrict DB access to the app's own pods (NetworkPolicy). No-op if the CNI
+# does not enforce policies, but safe to apply.
+networkPolicy:
+  enabled: true
+
 podSecurityContext:
   runAsNonRoot: true
   runAsUser: 1001
   fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
 
 securityContext:
   allowPrivilegeEscalation: false

@@ -3,7 +3,10 @@ import type { NextAuthConfig } from "next-auth"
 // Edge-safe config (no DB / Node-only imports) — shared by middleware and the full auth.
 export const authConfig = {
   trustHost: true,
-  session: { strategy: "jwt" },
+  // Shorter session limits the window in which a demoted/disabled user keeps
+  // access under the JWT strategy (see the session-hardening issue for full
+  // per-request status enforcement).
+  session: { strategy: "jwt", maxAge: 60 * 60 * 8 },
   pages: { signIn: "/login" },
   providers: [], // real providers are added in auth.ts (Node runtime)
   callbacks: {
