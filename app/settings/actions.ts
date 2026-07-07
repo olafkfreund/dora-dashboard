@@ -85,7 +85,7 @@ export async function testConnection(_prev: ActionState, formData: FormData): Pr
   let detail = ""
   try {
     const token = decryptSecret(row.encryptedToken)
-    const cfg = (row.config ?? {}) as { baseUrl?: string; email?: string }
+    const cfg = (row.config ?? {}) as { baseUrl?: string; email?: string; group?: string }
     if (provider === "GITHUB") {
       const res = await fetch("https://api.github.com/user", {
         headers: { Authorization: `Bearer ${token}`, "User-Agent": "dora-dashboard" },
@@ -94,11 +94,28 @@ export async function testConnection(_prev: ActionState, formData: FormData): Pr
       detail = ok ? `Connected as ${(await res.json()).login}` : `GitHub returned ${res.status}`
     } else if (provider === "GITLAB") {
       const base = (cfg.baseUrl || "https://gitlab.com").replace(/\/$/, "")
-      const res = await fetch(`${base}/api/v4/user`, {
-        headers: { "PRIVATE-TOKEN": token, Accept: "application/json" },
-      })
-      ok = res.ok
-      detail = ok ? `Connected as ${(await res.json()).username}` : `GitLab returned ${res.status}`
+      const target = cfg.group?.trim()
+      const headers = { "PRIVATE-TOKEN": token, Accept: "application/json" }
+      if (target) {
+        // Validate access to the configured group/project (what we ingest) —
+        // fine-grained tokens often can't read /user but can read their group.
+        const enc = encodeURIComponent(target)
+        let res = await fetch(`${base}/api/v4/groups/${enc}`, { headers })
+        if (!res.ok) res = await fetch(`${base}/api/v4/projects/${enc}`, { headers })
+        ok = res.ok
+        if (ok) {
+          const j = await res.json()
+          detail = `Connected · ${j.full_path || j.path_with_namespace || j.name}`
+        } else {
+          detail = `GitLab returned ${res.status} for "${target}" — check the path and the token's read access to it`
+        }
+      } else {
+        const res = await fetch(`${base}/api/v4/user`, { headers })
+        ok = res.ok
+        detail = ok
+          ? `Connected as ${(await res.json()).username}`
+          : `GitLab returned ${res.status} — set a group/project path above, or use a token with read_api`
+      }
     } else {
       const base = (cfg.baseUrl ?? "").replace(/\/$/, "")
       const auth = Buffer.from(`${cfg.email}:${token}`).toString("base64")
