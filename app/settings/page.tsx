@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth-helpers"
 import { db } from "@/db"
 import { integrations, ssoProviders } from "@/db/schema"
 import { AppHeader } from "@/components/app-header"
+import { features } from "@/lib/features"
 import { IntegrationsPanel, type IntegrationView } from "./integrations-panel"
 import { SsoPanel, type SsoView } from "./sso-panel"
 
@@ -48,10 +49,11 @@ export default async function SettingsPage() {
   const gitlabLastSync = gitlabRow?.lastSyncAt
     ? gitlabRow.lastSyncAt.toISOString().slice(0, 16).replace("T", " ") + " UTC"
     : null
-  const github = toIntegrationView(intRows.find((r) => r.provider === "GITHUB"))
+  // GitHub cards are hidden unless FEATURE_GITHUB is enabled.
+  const github = features.github ? toIntegrationView(intRows.find((r) => r.provider === "GITHUB")) : undefined
   const jira = toIntegrationView(intRows.find((r) => r.provider === "JIRA"))
   const entra = toSsoView(ssoRows.find((r) => r.provider === "ENTRA"))
-  const githubOauth = toSsoView(ssoRows.find((r) => r.provider === "GITHUB"))
+  const githubOauth = features.github ? toSsoView(ssoRows.find((r) => r.provider === "GITHUB")) : undefined
 
   const proto = h.get("x-forwarded-proto") ?? "http"
   const host = h.get("host") ?? "localhost:8191"

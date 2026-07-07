@@ -5,6 +5,7 @@ import type { Provider } from "next-auth/providers"
 import { db } from "@/db"
 import { ssoProviders } from "@/db/schema"
 import { decryptSecret } from "@/lib/crypto"
+import { features } from "@/lib/features"
 
 type SsoRow = typeof ssoProviders.$inferSelect
 type SsoConfig = { clientId?: string; tenantId?: string }
@@ -41,7 +42,7 @@ export async function loadSsoProviders(): Promise<Provider[]> {
           issuer: `https://login.microsoftonline.com/${cfg.tenantId ?? "common"}/v2.0`,
         })
       )
-    } else if (row.provider === "GITHUB") {
+    } else if (row.provider === "GITHUB" && features.github) {
       providers.push(GitHub({ clientId: cfg.clientId!, clientSecret: secret }))
     }
   }
@@ -53,6 +54,6 @@ export async function enabledSsoProviders(): Promise<{ entra: boolean; github: b
   const rows = await readUsableRows()
   return {
     entra: rows.some((r) => r.provider === "ENTRA"),
-    github: rows.some((r) => r.provider === "GITHUB"),
+    github: features.github && rows.some((r) => r.provider === "GITHUB"),
   }
 }

@@ -52,7 +52,7 @@ export function IntegrationsPanel({
   gitlabLastSync,
 }: {
   gitlab: IntegrationView
-  github: IntegrationView
+  github?: IntegrationView
   jira: IntegrationView
   gitlabLastSync?: string | null
 }) {
@@ -119,7 +119,8 @@ export function IntegrationsPanel({
         </CardContent>
       </Card>
 
-      {/* GitHub */}
+      {/* GitHub (hidden unless FEATURE_GITHUB is enabled) */}
+      {github && (
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -152,6 +153,7 @@ export function IntegrationsPanel({
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Jira */}
       <Card>

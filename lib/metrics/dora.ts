@@ -11,7 +11,12 @@ export { computeDoraFromRows } from "./dora-compute"
 export async function computeDora(now = new Date()): Promise<DoraResult> {
   const since = new Date(now.getTime() - WEEKS * 7 * 864e5)
   const rows = await db
-    .select({ status: gitlabDeployments.status, finishedAt: gitlabDeployments.finishedAt })
+    .select({
+      projectId: gitlabDeployments.projectId,
+      status: gitlabDeployments.status,
+      finishedAt: gitlabDeployments.finishedAt,
+      committedAt: gitlabDeployments.committedAt,
+    })
     .from(gitlabDeployments)
     .where(and(gte(gitlabDeployments.finishedAt, since), isNotNull(gitlabDeployments.finishedAt)))
   return computeDoraFromRows(rows, now)

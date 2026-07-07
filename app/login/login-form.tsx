@@ -95,7 +95,7 @@ export function LoginForm({
         ) : (
           <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="size-3.5" />
-            Enterprise SSO (Entra ID / GitHub) can be enabled in Settings.
+            Enterprise SSO (Entra ID) can be enabled in Settings.
           </div>
         )}
       </div>

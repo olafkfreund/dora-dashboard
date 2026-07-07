@@ -1,0 +1,1 @@
+ALTER TABLE "gitlab_deployment" ADD COLUMN "committedAt" timestamp;

@@ -13,6 +13,8 @@ export default async function Home() {
     if (dora.hasData) {
       if (dora.deploymentFrequency) overrides["deployment-frequency"] = dora.deploymentFrequency
       if (dora.changeFailureRate) overrides["change-failure-rate"] = dora.changeFailureRate
+      if (dora.leadTime) overrides["lead-time-for-changes"] = dora.leadTime
+      if (dora.mttr) overrides["mttr"] = dora.mttr
     }
   } catch {
     overrides = {}
@@ -34,19 +36,9 @@ export default async function Home() {
           <h2 className="text-2xl font-semibold tracking-tight">
             Delivery performance overview
           </h2>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            DORA-4 (from GitLab) plus Synechron&apos;s extended delivery and quality
-            metrics in a self-hosted, audit-ready portal for regulated environments.{" "}
-            <span className="text-foreground">Click any metric for details.</span>
-          </p>
         </div>
 
         <MetricExplorer overrides={overrides} />
-
-        <footer className="mt-6 border-t border-border pt-6 text-xs text-muted-foreground">
-          Self-hosted · no third-party data egress · team-level metrics only (no
-          individual ranking) · Azure Entra ID SSO + GitHub OAuth · Docker &amp; Helm.
-        </footer>
       </main>
     </div>
   )

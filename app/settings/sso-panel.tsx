@@ -41,7 +41,7 @@ export function SsoPanel({
   callbackBase,
 }: {
   entra: SsoView
-  github: SsoView
+  github?: SsoView
   callbackBase: string
 }) {
   const [entraState, entraAction, entraPending] = useActionState(saveEntra, undefined)
@@ -79,7 +79,8 @@ export function SsoPanel({
         </CardContent>
       </Card>
 
-      {/* GitHub OAuth */}
+      {/* GitHub OAuth (hidden unless FEATURE_GITHUB is enabled) */}
+      {github && (
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -107,6 +108,7 @@ export function SsoPanel({
           </form>
         </CardContent>
       </Card>
+      )}
     </div>
   )
 }

@@ -102,11 +102,6 @@ export function MetricDialog({
             <h3 className="mb-1 text-sm font-semibold">Insight</h3>
             <p className="text-sm text-muted-foreground">{metric.insight}</p>
           </div>
-
-          <p className="border-t border-border pt-4 text-xs text-muted-foreground">
-            Sample data shown in this preview. Live values are computed from {metric.source} ingestion once
-            integrations are connected.
-          </p>
         </div>
       </div>
     </div>

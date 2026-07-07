@@ -118,6 +118,8 @@ export const gitlabDeployments = pgTable("gitlab_deployment", {
   sha: text("sha"),
   createdAt: timestamp("createdAt", { mode: "date" }),
   finishedAt: timestamp("finishedAt", { mode: "date" }),
+  // Authored date of the deployed commit — for Lead Time for Changes.
+  committedAt: timestamp("committedAt", { mode: "date" }),
   ingestedAt: timestamp("ingestedAt", { mode: "date" }).notNull().defaultNow(),
 })
 

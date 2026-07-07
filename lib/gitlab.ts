@@ -76,6 +76,26 @@ export async function gitlabPaginate<T = unknown>(
   return out
 }
 
+/** Authored/committed date of a commit (for Lead Time for Changes). */
+export async function getCommitDate(
+  cfg: GitlabConfig,
+  projectId: number,
+  sha: string
+): Promise<Date | null> {
+  try {
+    const res = await fetch(
+      apiUrl(cfg.baseUrl, `/projects/${projectId}/repository/commits/${encodeURIComponent(sha)}`),
+      { headers: { "PRIVATE-TOKEN": cfg.token, Accept: "application/json" } }
+    )
+    if (!res.ok) return null
+    const c = (await res.json()) as { committed_date?: string; authored_date?: string }
+    const d = c.committed_date || c.authored_date
+    return d ? new Date(d) : null
+  } catch {
+    return null
+  }
+}
+
 export interface GitlabProject {
   id: number
   path_with_namespace: string
