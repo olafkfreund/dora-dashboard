@@ -84,9 +84,10 @@ export function IntegrationsPanel({
         <CardContent className="space-y-4">
           <form action={glSaveAction} className="space-y-4">
             <Field label="Base URL" name="baseUrl" defaultValue={gitlab.config.baseUrl} placeholder="https://gitlab.com (or self-managed URL)" />
-            <Field label="Group / namespace (optional)" name="group" defaultValue={gitlab.config.group} placeholder="my-group" />
+            <Field label="Group or project path" name="group" defaultValue={gitlab.config.group} placeholder="e.g. my-group  or  my-group/my-project" />
+            <Field label="Production environment name" name="prodEnv" defaultValue={gitlab.config.prodEnv} placeholder="production" />
             <Field
-              label="Access token (PAT / group token)"
+              label="Access token (PAT — needs read_api scope)"
               name="token"
               type="password"
               placeholder={gitlab.hasToken ? "•••• stored — leave blank to keep" : "glpat-…"}

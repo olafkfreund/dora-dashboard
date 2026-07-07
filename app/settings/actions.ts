@@ -49,9 +49,10 @@ export async function saveGitlab(_prev: ActionState, formData: FormData): Promis
   const admin = await requireAdmin()
   const baseUrl = String(formData.get("baseUrl") ?? "").trim() || "https://gitlab.com"
   const group = String(formData.get("group") ?? "").trim()
+  const prodEnv = String(formData.get("prodEnv") ?? "").trim() || "production"
   const token = String(formData.get("token") ?? "").trim()
-  await upsertIntegration(admin.id, "GITLAB", { baseUrl, group }, token)
-  await writeAudit(admin.id, "integration.save", "GITLAB", { baseUrl, group, tokenUpdated: Boolean(token) })
+  await upsertIntegration(admin.id, "GITLAB", { baseUrl, group, prodEnv }, token)
+  await writeAudit(admin.id, "integration.save", "GITLAB", { baseUrl, group, prodEnv, tokenUpdated: Boolean(token) })
   revalidatePath("/settings")
   return { ok: true, message: "GitLab integration saved." }
 }

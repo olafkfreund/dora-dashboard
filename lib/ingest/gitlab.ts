@@ -2,7 +2,7 @@ import "server-only"
 import { eq } from "drizzle-orm"
 import { db } from "@/db"
 import { gitlabDeployments, gitlabMergeRequests, syncState, integrations } from "@/db/schema"
-import { getGitlabConfig, gitlabPaginate, listProjects, type GitlabConfig } from "@/lib/gitlab"
+import { getGitlabConfig, gitlabPaginate, listProjects, type GitlabConfig, type GitlabProject } from "@/lib/gitlab"
 
 export interface SyncResult {
   ok: boolean
@@ -11,8 +11,6 @@ export interface SyncResult {
   deployments?: number
   mergeRequests?: number
 }
-
-const PROD_ENV = "production"
 
 interface GitlabDeployment {
   id: number
@@ -42,21 +40,20 @@ async function getCursor(id: string): Promise<string | undefined> {
   return rows[0]?.cursor ?? undefined
 }
 
-async function setCursor(id: string, provider: string, entity: string, cursor: string, itemCount: number, error?: string) {
+async function setCursor(id: string, provider: string, entity: string, cursor: string, itemCount: number) {
   await db
     .insert(syncState)
-    .values({ id, provider, entity, cursor, lastSyncAt: new Date(), lastError: error ?? null, itemCount })
+    .values({ id, provider, entity, cursor, lastSyncAt: new Date(), lastError: null, itemCount })
     .onConflictDoUpdate({
       target: syncState.id,
-      set: { cursor, lastSyncAt: new Date(), lastError: error ?? null, itemCount },
+      set: { cursor, lastSyncAt: new Date(), lastError: null, itemCount },
     })
 }
 
-async function syncDeployments(cfg: GitlabConfig): Promise<number> {
+async function syncDeployments(cfg: GitlabConfig, projects: GitlabProject[]): Promise<number> {
   const cursorId = "GITLAB:deployments"
   const cursor = await getCursor(cursorId)
   const updatedAfter = cursor ?? new Date(Date.now() - 90 * 864e5).toISOString()
-  const projects = await listProjects(cfg)
   let count = 0
   let maxUpdated = cursor ?? updatedAfter
 
@@ -64,7 +61,7 @@ async function syncDeployments(cfg: GitlabConfig): Promise<number> {
     const deps = await gitlabPaginate<GitlabDeployment>(
       cfg,
       `/projects/${project.id}/deployments`,
-      { environment: PROD_ENV, order_by: "updated_at", sort: "desc", updated_after: updatedAfter },
+      { environment: cfg.prodEnv, order_by: "updated_at", sort: "desc", updated_after: updatedAfter },
       10
     )
     for (const d of deps) {
@@ -76,7 +73,7 @@ async function syncDeployments(cfg: GitlabConfig): Promise<number> {
           projectId: project.id,
           deploymentId: d.id,
           projectPath: project.path_with_namespace,
-          environment: d.environment?.name ?? PROD_ENV,
+          environment: d.environment?.name ?? cfg.prodEnv,
           status: d.status,
           ref: d.ref,
           sha: d.sha,
@@ -96,55 +93,66 @@ async function syncDeployments(cfg: GitlabConfig): Promise<number> {
   return count
 }
 
-async function syncMergeRequests(cfg: GitlabConfig): Promise<number> {
-  if (!cfg.group) return 0
+async function syncMergeRequests(cfg: GitlabConfig, projects: GitlabProject[]): Promise<number> {
   const cursorId = "GITLAB:merge_requests"
   const cursor = await getCursor(cursorId)
   const updatedAfter = cursor ?? new Date(Date.now() - 90 * 864e5).toISOString()
-  const mrs = await gitlabPaginate<GitlabMergeRequest>(
-    cfg,
-    `/groups/${encodeURIComponent(cfg.group)}/merge_requests`,
-    { state: "merged", order_by: "updated_at", sort: "desc", updated_after: updatedAfter },
-    10
-  )
+  let count = 0
   let maxUpdated = cursor ?? updatedAfter
-  for (const mr of mrs) {
-    await db
-      .insert(gitlabMergeRequests)
-      .values({
-        id: `${mr.project_id}:${mr.iid}`,
-        projectId: mr.project_id,
-        iid: mr.iid,
-        createdAt: toDate(mr.created_at),
-        mergedAt: toDate(mr.merged_at),
-        ingestedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: gitlabMergeRequests.id,
-        set: { mergedAt: toDate(mr.merged_at), ingestedAt: new Date() },
-      })
-    if (mr.merged_at && mr.merged_at > maxUpdated) maxUpdated = mr.merged_at
+
+  for (const project of projects) {
+    const mrs = await gitlabPaginate<GitlabMergeRequest>(
+      cfg,
+      `/projects/${project.id}/merge_requests`,
+      { state: "merged", order_by: "updated_at", sort: "desc", updated_after: updatedAfter },
+      5
+    )
+    for (const mr of mrs) {
+      await db
+        .insert(gitlabMergeRequests)
+        .values({
+          id: `${project.id}:${mr.iid}`,
+          projectId: project.id,
+          iid: mr.iid,
+          projectPath: project.path_with_namespace,
+          createdAt: toDate(mr.created_at),
+          mergedAt: toDate(mr.merged_at),
+          ingestedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: gitlabMergeRequests.id,
+          set: { mergedAt: toDate(mr.merged_at), ingestedAt: new Date() },
+        })
+      count++
+      if (mr.merged_at && mr.merged_at > maxUpdated) maxUpdated = mr.merged_at
+    }
   }
-  await setCursor(cursorId, "GITLAB", "merge_requests", maxUpdated, mrs.length)
-  return mrs.length
+  await setCursor(cursorId, "GITLAB", "merge_requests", maxUpdated, count)
+  return count
 }
 
-/** Incrementally ingest GitLab deployments + merged MRs into Postgres. */
+/** Incrementally ingest GitLab production deployments + merged MRs into Postgres. */
 export async function syncGitlab(): Promise<SyncResult> {
   const cfg = await getGitlabConfig()
   if (!cfg) return { ok: false, message: "GitLab is not configured — save a token in Settings first." }
   try {
-    const projects = (await listProjects(cfg)).length
-    const deployments = await syncDeployments(cfg)
-    const mergeRequests = await syncMergeRequests(cfg)
+    const projects = await listProjects(cfg)
+    if (projects.length === 0) {
+      return {
+        ok: false,
+        message: `No projects found for "${cfg.target ?? "(membership)"}". Check the group/project path and the token's read_api scope.`,
+      }
+    }
+    const deployments = await syncDeployments(cfg, projects)
+    const mergeRequests = await syncMergeRequests(cfg, projects)
     await db
       .update(integrations)
       .set({ status: "CONNECTED", lastSyncAt: new Date(), lastError: null })
       .where(eq(integrations.provider, "GITLAB"))
     return {
       ok: true,
-      message: `Synced ${deployments} deployment(s) and ${mergeRequests} merge request(s) across ${projects} project(s).`,
-      projects,
+      message: `Synced ${deployments} '${cfg.prodEnv}' deployment(s) and ${mergeRequests} merge request(s) across ${projects.length} project(s).`,
+      projects: projects.length,
       deployments,
       mergeRequests,
     }
