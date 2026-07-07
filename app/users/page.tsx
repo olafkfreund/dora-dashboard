@@ -5,6 +5,7 @@ import { users } from "@/db/schema"
 import { AppHeader } from "@/components/app-header"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { StatusBadge } from "@/components/ui/status-badge"
 import { CreateUserForm } from "./create-user-form"
 import { setRole, toggleStatus } from "./actions"
 
@@ -65,15 +66,9 @@ export default async function UsersPage() {
                     </form>
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={
-                        u.status === "ACTIVE"
-                          ? "rounded-full bg-[color:var(--success)]/15 px-2 py-0.5 text-[11px] font-semibold text-[color:var(--success)]"
-                          : "rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground"
-                      }
-                    >
+                    <StatusBadge tone={u.status === "ACTIVE" ? "success" : "muted"}>
                       {u.status.toLowerCase()}
-                    </span>
+                    </StatusBadge>
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
                     {u.lastLoginAt ? u.lastLoginAt.toISOString().slice(0, 16).replace("T", " ") : "never"}

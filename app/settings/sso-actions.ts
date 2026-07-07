@@ -4,22 +4,45 @@ import { revalidatePath } from "next/cache"
 import { eq } from "drizzle-orm"
 import { requireAdmin } from "@/lib/auth-helpers"
 import { db } from "@/db"
-import { ssoProviders, auditLogs } from "@/db/schema"
+import { ssoProviders } from "@/db/schema"
 import { encryptSecret } from "@/lib/crypto"
+import { writeAudit } from "@/lib/audit"
+import type { ActionState } from "@/lib/action-state"
 
-type ActionState = { ok?: boolean; message?: string } | undefined
+type SsoProvider = "ENTRA" | "GITHUB"
 
-async function audit(actorId: string, action: string, target: string, meta: Record<string, unknown>) {
-  await db.insert(auditLogs).values({ actorId, action, target, meta })
-}
-
-async function hasStoredSecret(provider: "ENTRA" | "GITHUB") {
+async function hasStoredSecret(provider: SsoProvider) {
   const rows = await db
     .select({ token: ssoProviders.encryptedSecret })
     .from(ssoProviders)
     .where(eq(ssoProviders.provider, provider))
     .limit(1)
   return Boolean(rows[0]?.token)
+}
+
+/** Upsert a single-row SSO config, encrypting the secret only when a new one is given. */
+async function upsertSso(
+  actorId: string,
+  provider: SsoProvider,
+  config: Record<string, string>,
+  secret: string,
+  enabled: boolean
+) {
+  const encrypted = secret ? { encryptedSecret: encryptSecret(secret) } : {}
+  await db
+    .insert(ssoProviders)
+    .values({
+      provider,
+      enabled,
+      config,
+      encryptedSecret: secret ? encryptSecret(secret) : null,
+      updatedById: actorId,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: ssoProviders.provider,
+      set: { enabled, config, ...encrypted, updatedById: actorId, updatedAt: new Date() },
+    })
 }
 
 export async function saveEntra(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -32,28 +55,8 @@ export async function saveEntra(_prev: ActionState, formData: FormData): Promise
   if (enabled && (!clientId || (!secret && !(await hasStoredSecret("ENTRA"))))) {
     return { ok: false, message: "Client ID and secret are required to enable Entra ID SSO." }
   }
-  const config = { clientId, tenantId }
-  await db
-    .insert(ssoProviders)
-    .values({
-      provider: "ENTRA",
-      enabled,
-      config,
-      encryptedSecret: secret ? encryptSecret(secret) : null,
-      updatedById: admin.id,
-      updatedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: ssoProviders.provider,
-      set: {
-        enabled,
-        config,
-        ...(secret ? { encryptedSecret: encryptSecret(secret) } : {}),
-        updatedById: admin.id,
-        updatedAt: new Date(),
-      },
-    })
-  await audit(admin.id, "sso.save", "ENTRA", { enabled, tenantId, secretUpdated: Boolean(secret) })
+  await upsertSso(admin.id, "ENTRA", { clientId, tenantId }, secret, enabled)
+  await writeAudit(admin.id, "sso.save", "ENTRA", { enabled, tenantId, secretUpdated: Boolean(secret) })
   revalidatePath("/settings")
   revalidatePath("/login")
   return { ok: true, message: enabled ? "Entra ID SSO saved and enabled." : "Entra ID SSO saved (disabled)." }
@@ -68,28 +71,8 @@ export async function saveGithubOauth(_prev: ActionState, formData: FormData): P
   if (enabled && (!clientId || (!secret && !(await hasStoredSecret("GITHUB"))))) {
     return { ok: false, message: "Client ID and secret are required to enable GitHub OAuth." }
   }
-  const config = { clientId }
-  await db
-    .insert(ssoProviders)
-    .values({
-      provider: "GITHUB",
-      enabled,
-      config,
-      encryptedSecret: secret ? encryptSecret(secret) : null,
-      updatedById: admin.id,
-      updatedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: ssoProviders.provider,
-      set: {
-        enabled,
-        config,
-        ...(secret ? { encryptedSecret: encryptSecret(secret) } : {}),
-        updatedById: admin.id,
-        updatedAt: new Date(),
-      },
-    })
-  await audit(admin.id, "sso.save", "GITHUB", { enabled, secretUpdated: Boolean(secret) })
+  await upsertSso(admin.id, "GITHUB", { clientId }, secret, enabled)
+  await writeAudit(admin.id, "sso.save", "GITHUB", { enabled, secretUpdated: Boolean(secret) })
   revalidatePath("/settings")
   revalidatePath("/login")
   return { ok: true, message: enabled ? "GitHub OAuth saved and enabled." : "GitHub OAuth saved (disabled)." }

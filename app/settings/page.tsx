@@ -15,7 +15,6 @@ function toIntegrationView(
         config: unknown
         encryptedToken: string | null
         lastError: string | null
-        lastSyncAt: Date | null
       }
     | undefined
 ): IntegrationView {
@@ -24,7 +23,6 @@ function toIntegrationView(
     hasToken: Boolean(row?.encryptedToken),
     config: (row?.config as Record<string, string>) ?? {},
     lastError: row?.lastError ?? null,
-    lastSyncAt: row?.lastSyncAt ? row.lastSyncAt.toISOString() : null,
   }
 }
 

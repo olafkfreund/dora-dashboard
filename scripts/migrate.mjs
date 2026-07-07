@@ -4,17 +4,12 @@ import postgres from "postgres"
 import { readFileSync, readdirSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { dirname, join } from "node:path"
+import { loadEnv } from "./load-env.mjs"
 
 const __dir = dirname(fileURLToPath(import.meta.url))
 const migrationsDir = join(__dir, "..", "db", "migrations")
 
-// Load .env if present (local dev); in-cluster relies on real env vars.
-try {
-  for (const line of readFileSync(join(__dir, "..", ".env"), "utf8").split("\n")) {
-    const m = line.match(/^([A-Z0-9_]+)=(.*)$/)
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^"(.*)"$/, "$1")
-  }
-} catch {}
+loadEnv()
 
 const url = process.env.DATABASE_URL
 if (!url) throw new Error("DATABASE_URL not set")

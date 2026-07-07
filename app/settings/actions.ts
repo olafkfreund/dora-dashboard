@@ -4,103 +4,61 @@ import { revalidatePath } from "next/cache"
 import { eq } from "drizzle-orm"
 import { requireAdmin } from "@/lib/auth-helpers"
 import { db } from "@/db"
-import { integrations, auditLogs } from "@/db/schema"
+import { integrations } from "@/db/schema"
 import { encryptSecret, decryptSecret } from "@/lib/crypto"
+import { writeAudit } from "@/lib/audit"
+import type { ActionState } from "@/lib/action-state"
 
-type ActionState = { ok?: boolean; message?: string } | undefined
+type IntegrationProvider = "GITHUB" | "JIRA"
 
-async function writeAudit(
+/** Upsert a single-row integration config, encrypting the token only when a new one is given. */
+async function upsertIntegration(
   actorId: string,
-  action: string,
-  target: string,
-  meta: Record<string, unknown>
+  provider: IntegrationProvider,
+  config: Record<string, string>,
+  token: string
 ) {
-  await db.insert(auditLogs).values({ actorId, action, target, meta })
-}
-
-export async function saveGithub(
-  _prev: ActionState,
-  formData: FormData
-): Promise<ActionState> {
-  const admin = await requireAdmin()
-  const org = String(formData.get("org") ?? "").trim()
-  const token = String(formData.get("token") ?? "").trim()
-  const config = { org, authMode: "pat" as const }
-
+  const encrypted = token ? { encryptedToken: encryptSecret(token) } : {}
   await db
     .insert(integrations)
     .values({
-      provider: "GITHUB",
+      provider,
       status: "CONNECTED",
       config,
       encryptedToken: token ? encryptSecret(token) : null,
-      updatedById: admin.id,
+      updatedById: actorId,
       updatedAt: new Date(),
     })
     .onConflictDoUpdate({
       target: integrations.provider,
-      set: {
-        status: "CONNECTED",
-        config,
-        ...(token ? { encryptedToken: encryptSecret(token) } : {}),
-        updatedById: admin.id,
-        updatedAt: new Date(),
-      },
+      set: { status: "CONNECTED", config, ...encrypted, updatedById: actorId, updatedAt: new Date() },
     })
+}
 
-  await writeAudit(admin.id, "integration.save", "GITHUB", {
-    org,
-    tokenUpdated: Boolean(token),
-  })
+export async function saveGithub(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const admin = await requireAdmin()
+  const org = String(formData.get("org") ?? "").trim()
+  const token = String(formData.get("token") ?? "").trim()
+  await upsertIntegration(admin.id, "GITHUB", { org, authMode: "pat" }, token)
+  await writeAudit(admin.id, "integration.save", "GITHUB", { org, tokenUpdated: Boolean(token) })
   revalidatePath("/settings")
   return { ok: true, message: "GitHub integration saved." }
 }
 
-export async function saveJira(
-  _prev: ActionState,
-  formData: FormData
-): Promise<ActionState> {
+export async function saveJira(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const admin = await requireAdmin()
   const baseUrl = String(formData.get("baseUrl") ?? "").trim()
   const email = String(formData.get("email") ?? "").trim()
   const token = String(formData.get("token") ?? "").trim()
-  const config = { baseUrl, email }
-
-  await db
-    .insert(integrations)
-    .values({
-      provider: "JIRA",
-      status: "CONNECTED",
-      config,
-      encryptedToken: token ? encryptSecret(token) : null,
-      updatedById: admin.id,
-      updatedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: integrations.provider,
-      set: {
-        status: "CONNECTED",
-        config,
-        ...(token ? { encryptedToken: encryptSecret(token) } : {}),
-        updatedById: admin.id,
-        updatedAt: new Date(),
-      },
-    })
-
-  await writeAudit(admin.id, "integration.save", "JIRA", {
-    baseUrl,
-    tokenUpdated: Boolean(token),
-  })
+  await upsertIntegration(admin.id, "JIRA", { baseUrl, email }, token)
+  await writeAudit(admin.id, "integration.save", "JIRA", { baseUrl, tokenUpdated: Boolean(token) })
   revalidatePath("/settings")
   return { ok: true, message: "Jira integration saved." }
 }
 
-export async function testConnection(
-  _prev: ActionState,
-  formData: FormData
-): Promise<ActionState> {
+export async function testConnection(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const admin = await requireAdmin()
-  const provider = String(formData.get("provider") ?? "") as "GITHUB" | "JIRA"
+  const provider = String(formData.get("provider") ?? "") as IntegrationProvider
   const rows = await db
     .select()
     .from(integrations)

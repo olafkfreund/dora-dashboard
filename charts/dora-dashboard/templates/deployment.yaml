@@ -39,10 +39,7 @@ spec:
           args:
             - node scripts/migrate.mjs && node scripts/seed.mjs
           envFrom:
-            - configMapRef:
-                name: {{ include "dora.fullname" . }}-config
-            - secretRef:
-                name: {{ include "dora.secretName" . }}
+            {{- include "dora.envFrom" . | nindent 12 }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
       {{- end }}
@@ -59,10 +56,7 @@ spec:
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
           envFrom:
-            - configMapRef:
-                name: {{ include "dora.fullname" . }}-config
-            - secretRef:
-                name: {{ include "dora.secretName" . }}
+            {{- include "dora.envFrom" . | nindent 12 }}
           readinessProbe:
             httpGet:
               path: /login

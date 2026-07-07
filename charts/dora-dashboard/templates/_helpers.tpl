@@ -48,6 +48,13 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- printf "%s-postgres" (include "dora.fullname" .) -}}
 {{- end -}}
 
+{{- define "dora.envFrom" -}}
+- configMapRef:
+    name: {{ include "dora.fullname" . }}-config
+- secretRef:
+    name: {{ include "dora.secretName" . }}
+{{- end -}}
+
 {{- define "dora.nextauthUrl" -}}
 {{- if .Values.config.nextauthUrl -}}
 {{- .Values.config.nextauthUrl -}}

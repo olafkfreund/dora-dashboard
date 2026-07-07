@@ -3,6 +3,8 @@
 import { useActionState } from "react"
 import { Gauge, Github, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { FormMessage } from "@/components/ui/form-message"
+import { inputCls } from "@/lib/ui"
 import { loginAction, signInEntra, signInGithubSso } from "./actions"
 
 export function LoginForm({
@@ -43,7 +45,7 @@ export function LoginForm({
               required
               autoComplete="email"
               placeholder="you@company.com"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className={inputCls}
             />
           </div>
           <div className="space-y-1.5">
@@ -57,15 +59,12 @@ export function LoginForm({
               required
               autoComplete="current-password"
               placeholder="••••••••"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className={inputCls}
             />
           </div>
 
-          {error && (
-            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {error}
-            </p>
-          )}
+          <FormMessage state={error ? { ok: false, message: error } : undefined} />
+
 
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? "Signing in…" : "Sign in"}

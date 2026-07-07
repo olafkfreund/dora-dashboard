@@ -34,10 +34,7 @@ spec:
           args:
             - node scripts/migrate.mjs && node scripts/seed.mjs
           envFrom:
-            - configMapRef:
-                name: {{ include "dora.fullname" . }}-config
-            - secretRef:
-                name: {{ include "dora.secretName" . }}
+            {{- include "dora.envFrom" . | nindent 12 }}
           resources:
             requests:
               cpu: 50m

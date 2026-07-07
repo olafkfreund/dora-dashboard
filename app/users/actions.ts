@@ -6,9 +6,9 @@ import bcrypt from "bcryptjs"
 import { z } from "zod"
 import { requireAdmin } from "@/lib/auth-helpers"
 import { db } from "@/db"
-import { users, auditLogs } from "@/db/schema"
-
-type ActionState = { ok?: boolean; message?: string } | undefined
+import { users } from "@/db/schema"
+import { writeAudit } from "@/lib/audit"
+import type { ActionState } from "@/lib/action-state"
 
 const createSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -16,10 +16,6 @@ const createSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
   role: z.enum(["ADMIN", "LEAD", "VIEWER"]),
 })
-
-async function audit(actorId: string, action: string, target: string, meta: Record<string, unknown>) {
-  await db.insert(auditLogs).values({ actorId, action, target, meta })
-}
 
 export async function createUser(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const admin = await requireAdmin()
@@ -44,7 +40,7 @@ export async function createUser(_prev: ActionState, formData: FormData): Promis
     role: parsed.data.role,
     status: "ACTIVE",
   })
-  await audit(admin.id, "user.create", email, { role: parsed.data.role })
+  await writeAudit(admin.id, "user.create", email, { role: parsed.data.role })
   revalidatePath("/users")
   return { ok: true, message: `Created ${email}.` }
 }
@@ -55,7 +51,7 @@ export async function setRole(formData: FormData): Promise<void> {
   const role = String(formData.get("role") ?? "") as "ADMIN" | "LEAD" | "VIEWER"
   if (!id || !["ADMIN", "LEAD", "VIEWER"].includes(role)) return
   await db.update(users).set({ role, updatedAt: new Date() }).where(eq(users.id, id))
-  await audit(admin.id, "user.setRole", id, { role })
+  await writeAudit(admin.id, "user.setRole", id, { role })
   revalidatePath("/users")
 }
 
@@ -68,6 +64,6 @@ export async function toggleStatus(formData: FormData): Promise<void> {
   if (!current) return
   const next = current === "ACTIVE" ? "DISABLED" : "ACTIVE"
   await db.update(users).set({ status: next, updatedAt: new Date() }).where(eq(users.id, id))
-  await audit(admin.id, "user.setStatus", id, { status: next })
+  await writeAudit(admin.id, "user.setStatus", id, { status: next })
   revalidatePath("/users")
 }

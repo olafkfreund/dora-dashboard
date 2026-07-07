@@ -28,9 +28,3 @@ export function decryptSecret(blob: string): string {
   decipher.setAuthTag(Buffer.from(tag, "base64"))
   return Buffer.concat([decipher.update(Buffer.from(ct, "base64")), decipher.final()]).toString("utf8")
 }
-
-/** Show only the last 4 chars of a secret for UI confirmation. */
-export function maskSecret(plaintext: string): string {
-  if (plaintext.length <= 4) return "••••"
-  return "••••" + plaintext.slice(-4)
-}

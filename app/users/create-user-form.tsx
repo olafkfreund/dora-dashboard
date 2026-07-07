@@ -2,12 +2,10 @@
 
 import { useActionState } from "react"
 import { UserPlus } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { FormMessage } from "@/components/ui/form-message"
+import { inputCls } from "@/lib/ui"
 import { createUser } from "./actions"
-
-const inputCls =
-  "w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
 
 export function CreateUserForm() {
   const [state, action, pending] = useActionState(createUser, undefined)
@@ -36,18 +34,7 @@ export function CreateUserForm() {
       <Button type="submit" disabled={pending} className="w-full">
         <UserPlus className="size-4" /> {pending ? "Creating…" : "Add user"}
       </Button>
-      {state?.message && (
-        <p
-          className={cn(
-            "sm:col-span-2 lg:col-span-5 rounded-md border px-3 py-2 text-sm",
-            state.ok
-              ? "border-[color:var(--success)]/30 bg-[color:var(--success)]/10 text-[color:var(--success)]"
-              : "border-destructive/30 bg-destructive/10 text-destructive"
-          )}
-        >
-          {state.message}
-        </p>
-      )}
+      <FormMessage state={state} className="sm:col-span-2 lg:col-span-5" />
     </form>
   )
 }

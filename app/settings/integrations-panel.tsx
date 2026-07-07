@@ -2,79 +2,24 @@
 
 import { useActionState } from "react"
 import { Github, ListChecks, Plug } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Field } from "@/components/ui/labeled-input"
+import { FormMessage } from "@/components/ui/form-message"
+import { StatusBadge, type BadgeTone } from "@/components/ui/status-badge"
 import { saveGithub, saveJira, testConnection } from "./actions"
-
-type ActionState = { ok?: boolean; message?: string } | undefined
 
 export interface IntegrationView {
   status: "UNCONFIGURED" | "CONNECTED" | "ERROR"
   hasToken: boolean
   config: Record<string, string>
   lastError?: string | null
-  lastSyncAt?: string | null
 }
 
-function StatusBadge({ status }: { status: IntegrationView["status"] }) {
-  const map = {
-    CONNECTED: "bg-[color:var(--success)]/15 text-[color:var(--success)]",
-    ERROR: "bg-destructive/15 text-destructive",
-    UNCONFIGURED: "bg-muted text-muted-foreground",
-  } as const
-  return (
-    <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", map[status])}>
-      {status.toLowerCase()}
-    </span>
-  )
-}
-
-function Field({
-  label,
-  name,
-  type = "text",
-  defaultValue,
-  placeholder,
-}: {
-  label: string
-  name: string
-  type?: string
-  defaultValue?: string
-  placeholder?: string
-}) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={name} className="text-sm font-medium">
-        {label}
-      </label>
-      <input
-        id={name}
-        name={name}
-        type={type}
-        defaultValue={defaultValue}
-        placeholder={placeholder}
-        autoComplete="off"
-        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      />
-    </div>
-  )
-}
-
-function Msg({ state }: { state: ActionState }) {
-  if (!state?.message) return null
-  return (
-    <p
-      className={cn(
-        "rounded-md border px-3 py-2 text-sm",
-        state.ok
-          ? "border-[color:var(--success)]/30 bg-[color:var(--success)]/10 text-[color:var(--success)]"
-          : "border-destructive/30 bg-destructive/10 text-destructive"
-      )}
-    >
-      {state.message}
-    </p>
-  )
+const STATUS_TONE: Record<IntegrationView["status"], BadgeTone> = {
+  CONNECTED: "success",
+  ERROR: "error",
+  UNCONFIGURED: "muted",
 }
 
 export function IntegrationsPanel({
@@ -101,7 +46,7 @@ export function IntegrationsPanel({
               </div>
               <CardTitle className="text-base">GitHub</CardTitle>
             </div>
-            <StatusBadge status={github.status} />
+            <StatusBadge tone={STATUS_TONE[github.status]}>{github.status.toLowerCase()}</StatusBadge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -113,7 +58,7 @@ export function IntegrationsPanel({
               type="password"
               placeholder={github.hasToken ? "•••• stored — leave blank to keep" : "ghp_…"}
             />
-            <Msg state={ghSave} />
+            <FormMessage state={ghSave} />
             <Button type="submit" size="sm" disabled={ghSaving}>
               {ghSaving ? "Saving…" : "Save GitHub"}
             </Button>
@@ -124,7 +69,7 @@ export function IntegrationsPanel({
               <Plug className="size-4" /> Test connection
             </Button>
             <div className="flex-1">
-              <Msg state={ghTest} />
+              <FormMessage state={ghTest} />
             </div>
           </form>
           {github.lastError && !ghTest && (
@@ -143,7 +88,7 @@ export function IntegrationsPanel({
               </div>
               <CardTitle className="text-base">Jira</CardTitle>
             </div>
-            <StatusBadge status={jira.status} />
+            <StatusBadge tone={STATUS_TONE[jira.status]}>{jira.status.toLowerCase()}</StatusBadge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -156,7 +101,7 @@ export function IntegrationsPanel({
               type="password"
               placeholder={jira.hasToken ? "•••• stored — leave blank to keep" : "Atlassian API token"}
             />
-            <Msg state={jSave} />
+            <FormMessage state={jSave} />
             <Button type="submit" size="sm" disabled={jSaving}>
               {jSaving ? "Saving…" : "Save Jira"}
             </Button>
@@ -167,7 +112,7 @@ export function IntegrationsPanel({
               <Plug className="size-4" /> Test connection
             </Button>
             <div className="flex-1">
-              <Msg state={jTest} />
+              <FormMessage state={jTest} />
             </div>
           </form>
           {jira.lastError && !jTest && (
