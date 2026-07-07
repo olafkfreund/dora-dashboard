@@ -361,3 +361,101 @@ main {
     display: none;
   }
 }
+
+/* ---------- Documentation pages ---------- */
+.doc {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+}
+.doc .eyebrow { margin-bottom: 0.4rem; }
+.doc h1 {
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  line-height: 1.1;
+  margin: 0 0 0.6rem;
+  letter-spacing: -0.02em;
+}
+.doc > p.lead {
+  color: var(--muted-foreground);
+  font-size: 1.05rem;
+  max-width: 44rem;
+  margin: 0 0 2rem;
+}
+.doc h2 {
+  font-size: 1.5rem;
+  margin: 2.6rem 0 0.8rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--border);
+}
+.doc h3 { font-size: 1.15rem; margin: 1.6rem 0 0.5rem; }
+.doc h4 { font-size: 1rem; margin: 1.2rem 0 0.4rem; color: var(--primary); }
+.doc p, .doc li { color: var(--foreground); line-height: 1.65; }
+.doc a { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+.doc ul, .doc ol { padding-left: 1.3rem; }
+.doc li { margin: 0.3rem 0; }
+.doc code {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.85em;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.1rem 0.35rem;
+}
+.doc pre {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  font-size: 0.85rem;
+}
+.doc pre code { background: none; border: none; padding: 0; }
+
+/* Tables */
+.doc .table-wrap { overflow-x: auto; margin: 1rem 0; }
+.doc table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 34rem; }
+.doc th, .doc td { text-align: left; padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+.doc th { color: var(--muted-foreground); text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.08em; }
+
+/* Mermaid diagrams */
+.mermaid {
+  margin: 1.5rem 0;
+  padding: 1.2rem;
+  background: #141414;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow-x: auto;
+  text-align: center;
+}
+
+/* Callouts */
+.note, .tip, .warn {
+  border-left: 3px solid var(--primary);
+  background: var(--card);
+  border-radius: 0 10px 10px 0;
+  padding: 0.8rem 1rem;
+  margin: 1.2rem 0;
+  font-size: 0.92rem;
+}
+.warn { border-left-color: var(--destructive); }
+.tip { border-left-color: var(--success); }
+.note strong, .tip strong, .warn strong { color: var(--primary); }
+
+/* Metric doc card */
+.metric-doc {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.2rem 1.4rem;
+  margin: 1rem 0;
+}
+.metric-doc h3 { margin-top: 0; display: flex; align-items: center; gap: 0.6rem; }
+.tag-live { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--success); border: 1px solid var(--success); border-radius: 999px; padding: 0.1rem 0.5rem; }
+.tag-jira { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted-foreground); border: 1px solid var(--border); border-radius: 999px; padding: 0.1rem 0.5rem; }
+.metric-doc .src { font-size: 0.8rem; color: var(--muted-foreground); }
+.metric-doc .formula { font-family: "Geist Mono", monospace; font-size: 0.82rem; background: var(--muted); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.7rem; margin: 0.5rem 0; display: block; }
+.metric-doc .scenario { border-top: 1px dashed var(--border); margin-top: 0.8rem; padding-top: 0.7rem; font-size: 0.92rem; }
+.metric-doc .scenario strong { color: var(--primary); }
+
+.site-nav a.active { color: var(--primary); }
+.doc-toc { font-size: 0.9rem; color: var(--muted-foreground); }

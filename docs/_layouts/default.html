@@ -4,16 +4,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ page.title | default: site.title }}</title>
-    <meta name="description" content="{{ site.description }}" />
+    <meta name="description" content="{{ page.description | default: site.description }}" />
     <meta property="og:title" content="{{ page.title | default: site.title }}" />
-    <meta property="og:description" content="{{ site.description }}" />
+    <meta property="og:description" content="{{ page.description | default: site.description }}" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="{{ '/assets/img/modern.png' | absolute_url }}" />
     <meta name="twitter:card" content="summary_large_image" />
-    <link
-      rel="preconnect"
-      href="https://fonts.googleapis.com"
-    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap"
@@ -27,13 +24,14 @@
         <span class="brand-mark" aria-hidden="true">◔</span>
         <span class="brand-text">
           <strong>DORA Dashboard</strong>
-          <small>Delivery intelligence · GitHub + Jira</small>
+          <small>Delivery intelligence · GitLab + Jira</small>
         </span>
       </a>
       <nav class="site-nav">
-        <a href="#views">Views</a>
-        <a href="#metrics">Metrics</a>
-        <a href="#stack">Stack</a>
+        <a href="{{ '/' | relative_url }}">Home</a>
+        <a href="{{ '/metrics/' | relative_url }}">Metrics</a>
+        <a href="{{ '/architecture/' | relative_url }}">Architecture</a>
+        <a href="{{ '/install/' | relative_url }}">Install</a>
         <a class="btn btn-primary" href="{{ site.repo }}">GitHub ↗</a>
       </nav>
     </header>
@@ -42,14 +40,38 @@
 
     <footer class="site-footer">
       <p>
-        Self-hosted · no third-party data egress · Azure Entra ID SSO + GitHub
-        OAuth · Docker &amp; Helm.
+        Self-hosted · no third-party data egress · team-level metrics only (no
+        individual ranking) · Azure Entra ID SSO · Docker &amp; Helm.
       </p>
       <p class="muted">
         <a href="{{ site.repo }}">Repository</a> ·
-        <a href="{{ site.repo }}/issues/15">Epic &amp; roadmap</a> ·
-        Screenshots show a preview build with sample data.
+        <a href="{{ site.repo }}/issues/26">Roadmap &amp; issues</a> ·
+        GitLab is the primary DORA source.
       </p>
     </footer>
+
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"
+      mermaid.initialize({
+        startOnLoad: true,
+        securityLevel: "strict",
+        theme: "base",
+        fontFamily: "Montserrat, system-ui, sans-serif",
+        themeVariables: {
+          background: "#141414",
+          primaryColor: "#20242c",
+          primaryTextColor: "#f4f4f5",
+          primaryBorderColor: "#F4B400",
+          lineColor: "#F4B400",
+          secondaryColor: "#1b2b3a",
+          tertiaryColor: "#181818",
+          clusterBkg: "#1a1a1a",
+          clusterBorder: "#3a3a3a",
+          edgeLabelBackground: "#141414",
+          titleColor: "#F4B400",
+          nodeTextColor: "#f4f4f5",
+        },
+      })
+    </script>
   </body>
 </html>
