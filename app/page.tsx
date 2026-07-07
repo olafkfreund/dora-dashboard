@@ -4,6 +4,7 @@ import { MetricExplorer, type MetricOverride } from "@/components/metric-explore
 import { computeDora } from "@/lib/metrics/dora"
 import { computeJiraMetrics } from "@/lib/metrics/jira-metrics"
 import { computeCoverageMetric } from "@/lib/metrics/coverage"
+import { computePrCycleMetric } from "@/lib/metrics/pr-cycle"
 
 export default async function Home() {
   const user = await requireUser()
@@ -42,6 +43,13 @@ export default async function Home() {
     if (coverage.testAutomationCoverage) overrides["test-automation-coverage"] = coverage.testAutomationCoverage
   } catch {
     // no coverage ingested — keep sample
+  }
+  // PR cycle-time breakdown from GitLab merge requests.
+  try {
+    const pr = await computePrCycleMetric()
+    if (pr.prCycleTime) overrides["pr-cycle-time"] = pr.prCycleTime
+  } catch {
+    // MR data not ready — keep sample
   }
   const live = Object.keys(overrides).length > 0
 

@@ -9,6 +9,7 @@ import {
   Clock,
   FlaskConical,
   Gauge,
+  GitMerge,
   GitPullRequest,
   Hourglass,
   PieChart,
@@ -311,6 +312,25 @@ const base: Omit<Metric, "accent">[] = [
     insight:
       "Feature investment is healthy; watch tech-debt if it climbs above ~15% of effort.",
     history: [58, 59, 60, 61, 60, 62, 61, 62],
+  },
+  {
+    id: "pr-cycle-time",
+    group: "Flow",
+    label: "PR Cycle Time",
+    value: "1.6 days",
+    sub: "Code 4h · Pickup 6h · Review 1.1d · Deploy 2h",
+    icon: GitMerge,
+    trend: "down",
+    good: "down",
+    source: "GitLab",
+    target: "< 1 day",
+    unit: "days",
+    definition:
+      "Time from a change's first commit to merge, broken into Coding, Pickup, Review and Deploy stages — pinpoints where merge requests wait.",
+    formula: "median per stage across merged MRs (coding → pickup → review → deploy)",
+    insight:
+      "Review wait is typically the largest stage — reviewer SLAs or smaller MRs move it the most.",
+    history: [2.2, 2.1, 2.0, 1.9, 1.8, 1.7, 1.6, 1.6],
   },
 ]
 

@@ -139,6 +139,8 @@ export const gitlabMergeRequests = pgTable("gitlab_merge_request", {
   // first commit date — for MR-based Lead Time for Changes.
   mergeCommitSha: text("mergeCommitSha"),
   firstCommitAt: timestamp("firstCommitAt", { mode: "date" }),
+  // First review activity (earliest non-author, non-system note) — for PR cycle-time breakdown.
+  firstReviewAt: timestamp("firstReviewAt", { mode: "date" }),
   ingestedAt: timestamp("ingestedAt", { mode: "date" }).notNull().defaultNow(),
 })
 

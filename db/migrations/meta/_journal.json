@@ -71,6 +71,13 @@
       "when": 1783448055526,
       "tag": "0009_last_smiling_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783456659292,
+      "tag": "0010_normal_quentin_quire",
+      "breakpoints": true
     }
   ]
 }

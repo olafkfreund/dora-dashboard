@@ -117,6 +117,25 @@ export async function getMrFirstCommitDate(
   }
 }
 
+/** Date of the first review activity on an MR (earliest non-system note) — for PR cycle time. */
+export async function getMrFirstReviewDate(
+  cfg: GitlabConfig,
+  projectId: number,
+  iid: number
+): Promise<Date | null> {
+  try {
+    const notes = await gitlabGetOne<Array<{ system?: boolean; created_at?: string }>>(
+      cfg,
+      `/projects/${projectId}/merge_requests/${iid}/notes?sort=asc&order_by=created_at&per_page=100`
+    )
+    if (!Array.isArray(notes)) return null
+    const firstHuman = notes.find((n) => n.system === false && n.created_at)
+    return firstHuman?.created_at ? new Date(firstHuman.created_at) : null
+  } catch {
+    return null
+  }
+}
+
 /** Latest CI pipeline coverage for a project's default branch (for Test Automation Coverage). */
 export async function getLatestCoverage(
   cfg: GitlabConfig,

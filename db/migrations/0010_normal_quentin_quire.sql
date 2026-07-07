@@ -1,0 +1,1 @@
+ALTER TABLE "gitlab_merge_request" ADD COLUMN "firstReviewAt" timestamp;

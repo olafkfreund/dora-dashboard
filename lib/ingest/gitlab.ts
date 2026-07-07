@@ -1,11 +1,12 @@
 import "server-only"
-import { eq, and, isNull, isNotNull } from "drizzle-orm"
+import { eq, and, or, isNull, isNotNull } from "drizzle-orm"
 import { db } from "@/db"
 import { gitlabDeployments, gitlabMergeRequests, gitlabCoverage, syncState, integrations } from "@/db/schema"
 import {
   getGitlabConfig,
   getCommitDate,
   getMrFirstCommitDate,
+  getMrFirstReviewDate,
   getLatestCoverage,
   gitlabPaginate,
   listProjects,
@@ -164,18 +165,37 @@ async function backfillCommitDates(cfg: GitlabConfig): Promise<number> {
   return count
 }
 
-/** Fill firstCommitAt for merged MRs (their first commit's date) — for MR-based Lead Time. */
-async function backfillMrFirstCommit(cfg: GitlabConfig): Promise<number> {
+/** Fill firstCommitAt + firstReviewAt for merged MRs — for Lead Time and PR cycle-time breakdown. */
+async function backfillMrDetails(cfg: GitlabConfig): Promise<number> {
   const rows = await db
-    .select({ id: gitlabMergeRequests.id, projectId: gitlabMergeRequests.projectId, iid: gitlabMergeRequests.iid })
+    .select({
+      id: gitlabMergeRequests.id,
+      projectId: gitlabMergeRequests.projectId,
+      iid: gitlabMergeRequests.iid,
+      firstCommitAt: gitlabMergeRequests.firstCommitAt,
+      firstReviewAt: gitlabMergeRequests.firstReviewAt,
+    })
     .from(gitlabMergeRequests)
-    .where(and(isNull(gitlabMergeRequests.firstCommitAt), isNotNull(gitlabMergeRequests.mergedAt)))
+    .where(
+      and(
+        isNotNull(gitlabMergeRequests.mergedAt),
+        or(isNull(gitlabMergeRequests.firstCommitAt), isNull(gitlabMergeRequests.firstReviewAt))
+      )
+    )
     .limit(COMMIT_BACKFILL_LIMIT)
   let count = 0
   for (const r of rows) {
-    const firstCommitAt = await getMrFirstCommitDate(cfg, r.projectId, r.iid)
-    if (firstCommitAt) {
-      await db.update(gitlabMergeRequests).set({ firstCommitAt }).where(eq(gitlabMergeRequests.id, r.id))
+    const set: { firstCommitAt?: Date; firstReviewAt?: Date } = {}
+    if (!r.firstCommitAt) {
+      const d = await getMrFirstCommitDate(cfg, r.projectId, r.iid)
+      if (d) set.firstCommitAt = d
+    }
+    if (!r.firstReviewAt) {
+      const d = await getMrFirstReviewDate(cfg, r.projectId, r.iid)
+      if (d) set.firstReviewAt = d
+    }
+    if (Object.keys(set).length > 0) {
+      await db.update(gitlabMergeRequests).set(set).where(eq(gitlabMergeRequests.id, r.id))
       count++
     }
   }
@@ -215,7 +235,7 @@ export async function syncGitlab(): Promise<SyncResult> {
     const deployments = await syncDeployments(cfg, projects)
     const mergeRequests = await syncMergeRequests(cfg, projects)
     const commitsBackfilled = await backfillCommitDates(cfg)
-    await backfillMrFirstCommit(cfg)
+    await backfillMrDetails(cfg)
     const coverage = await syncCoverage(cfg, projects)
     await db
       .update(integrations)
