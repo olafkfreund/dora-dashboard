@@ -154,6 +154,14 @@ with <strong>Microsoft Defender for Containers</strong> (or Trivy in CI), plus S
 signing in the pipeline.</li>
 </ul>
 
+<div class="note"><strong>Web-security posture (OWASP ZAP-reviewed).</strong> The Content-Security-Policy
+sets <code>default-src 'self'</code>, <code>object-src 'none'</code>, <code>frame-ancestors 'none'</code>,
+<code>frame-src 'none'</code>, <code>base-uri 'self'</code>, <code>form-action 'self'</code> and
+<code>upgrade-insecure-requests</code>. <code>script-src</code> retains <code>'unsafe-inline'</code> —
+a known Next.js hydration constraint; a nonce-based strict CSP is a planned follow-up.
+<strong>CSRF</strong> is handled by Next.js Server Actions (same-origin enforcement), so no additional
+tokens are required. Responses are typed and served with <code>X-Content-Type-Options: nosniff</code>.</div>
+
 <div class="note"><strong>Kubernetes is optional.</strong> The same image also ships with a Helm
 chart for AKS/Kubernetes, but Azure App Service and Container Apps are the recommended,
 lower-ops path for most customers. See <a href="{{ '/azure/' | relative_url }}">Deploy to Azure</a>.</div>

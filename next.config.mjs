@@ -17,15 +17,21 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       // Next.js hydration + Tailwind require inline; no external script/style origins.
+      // ('unsafe-inline' for scripts is a known Next.js constraint; a nonce-based
+      // strict-CSP is a documented follow-up requiring careful browser validation.)
       "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data:",
       "font-src 'self' data:",
       "connect-src 'self'",
       "frame-ancestors 'none'",
+      "frame-src 'none'",
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
       "base-uri 'self'",
       "form-action 'self'",
       "object-src 'none'",
+      "upgrade-insecure-requests",
     ].join("; "),
   },
 ]
