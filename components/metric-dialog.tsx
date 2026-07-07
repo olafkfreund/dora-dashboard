@@ -5,6 +5,14 @@ import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { TrendBadge, type Metric } from "@/components/metrics-data"
 import { GradientAreaChart } from "@/components/metric-charts"
+import { classifyTier } from "@/lib/metrics/dora-tier"
+
+const TIER_CLS = {
+  elite: "border-emerald-500/30 bg-emerald-500/15 text-emerald-500",
+  high: "border-sky-500/30 bg-sky-500/15 text-sky-500",
+  medium: "border-amber-500/30 bg-amber-500/15 text-amber-500",
+  low: "border-red-500/30 bg-red-500/15 text-red-500",
+} as const
 
 export function MetricDialog({
   metric,
@@ -69,6 +77,14 @@ export function MetricDialog({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-3xl font-semibold tracking-tight">{metric.value}</span>
+                {(() => {
+                  const t = classifyTier(metric.id, metric.value)
+                  return t ? (
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${TIER_CLS[t.tone]}`}>
+                      {t.tier}
+                    </span>
+                  ) : null
+                })()}
                 <TrendBadge trend={metric.trend} good={metric.good} />
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{metric.unit}</p>

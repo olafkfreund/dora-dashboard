@@ -17,6 +17,7 @@ import {
   TrendBadge,
   type Metric,
 } from "@/components/metrics-data"
+import { classifyTier, type TierTone } from "@/lib/metrics/dora-tier"
 import {
   BarChart,
   CountUp,
@@ -52,6 +53,27 @@ function LiveDot() {
     <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[color:var(--success)]">
       <span className="size-1.5 rounded-full bg-[color:var(--success)]" />
       live
+    </span>
+  )
+}
+
+const TIER_CLS: Record<TierTone, string> = {
+  elite: "border-emerald-500/30 bg-emerald-500/15 text-emerald-500",
+  high: "border-sky-500/30 bg-sky-500/15 text-sky-500",
+  medium: "border-amber-500/30 bg-amber-500/15 text-amber-500",
+  low: "border-red-500/30 bg-red-500/15 text-red-500",
+}
+
+/** DORA performance-tier badge (Elite/High/Medium/Low) — DORA-4 metrics only. */
+function TierBadge({ metric }: { metric: Metric }) {
+  const t = classifyTier(metric.id, metric.value)
+  if (!t) return null
+  return (
+    <span
+      title={`DORA ${t.tier} performer`}
+      className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${TIER_CLS[t.tone]}`}
+    >
+      {t.tier}
     </span>
   )
 }
@@ -99,7 +121,7 @@ function CardsView({ items, liveIds, onOpen }: ViewProps) {
                         <div className="flex size-9 items-center justify-center rounded-lg bg-muted text-foreground">
                           <Icon className="size-5" />
                         </div>
-                        <div className="flex items-center gap-2">{liveIds.has(m.id) && <LiveDot />}<TrendBadge trend={m.trend} good={m.good} /></div>
+                        <div className="flex items-center gap-2">{liveIds.has(m.id) && <LiveDot />}<TierBadge metric={m} /><TrendBadge trend={m.trend} good={m.good} /></div>
                       </div>
                       <CardTitle className="mt-3 text-2xl">{m.value}</CardTitle>
                       <CardDescription>{m.label}</CardDescription>
@@ -150,7 +172,7 @@ function ChartsView({ items, liveIds, onOpen }: ViewProps) {
                           </div>
                           <CardDescription className="text-foreground">{m.label}</CardDescription>
                         </div>
-                        <div className="flex items-center gap-2">{liveIds.has(m.id) && <LiveDot />}<TrendBadge trend={m.trend} good={m.good} /></div>
+                        <div className="flex items-center gap-2">{liveIds.has(m.id) && <LiveDot />}<TierBadge metric={m} /><TrendBadge trend={m.trend} good={m.good} /></div>
                       </div>
                       <div className="mt-2 flex items-baseline gap-2">
                         <CardTitle className="text-2xl">{m.value}</CardTitle>
@@ -215,6 +237,7 @@ function ModernView({ items, liveIds, onOpen }: ViewProps) {
                       </div>
                       <div className="flex items-center gap-2">
                       {liveIds.has(m.id) && <LiveDot />}
+                      <TierBadge metric={m} />
                       <span
                         className={cn(
                           "rounded-full px-2 py-0.5 text-[10px] font-semibold",
