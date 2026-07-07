@@ -48,6 +48,14 @@ spec:
             capabilities:
               drop:
                 - ALL
+              # The official postgres entrypoint starts as root to fix data-dir
+              # ownership, then drops to the postgres user — it needs these caps.
+              add:
+                - CHOWN
+                - DAC_OVERRIDE
+                - FOWNER
+                - SETUID
+                - SETGID
           ports:
             - name: postgres
               containerPort: 5432
