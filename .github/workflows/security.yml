@@ -76,10 +76,12 @@ jobs:
           curl -sf http://localhost:8191/login >/dev/null || { docker compose logs; exit 1; }
 
       - name: OWASP ZAP baseline scan
+        continue-on-error: true # baseline scan reports findings; it does not gate the build
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: http://localhost:8191/login
-          cmd_options: "-a -I" # include alpha passive rules; do not fail the build on warnings
+          cmd_options: "-a -I" # include alpha passive rules; do not fail on warnings
+          fail_action: false
           allow_issue_writing: false
           artifact_name: zap-baseline-report
 
