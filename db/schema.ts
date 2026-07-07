@@ -39,6 +39,9 @@ export const users = pgTable("user", {
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
   lastLoginAt: timestamp("lastLoginAt", { mode: "date" }),
+  // Brute-force protection (account lockout).
+  failedLoginAttempts: integer("failedLoginAttempts").notNull().default(0),
+  lockedUntil: timestamp("lockedUntil", { mode: "date" }),
 })
 
 export const accounts = pgTable(

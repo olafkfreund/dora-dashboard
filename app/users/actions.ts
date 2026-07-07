@@ -8,12 +8,16 @@ import { requireAdmin } from "@/lib/auth-helpers"
 import { db } from "@/db"
 import { users } from "@/db/schema"
 import { writeAudit } from "@/lib/audit"
+import { validatePassword } from "@/lib/password-policy"
 import type { ActionState } from "@/lib/action-state"
 
 const createSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   email: z.string().trim().email("Valid email required"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().superRefine((pw, ctx) => {
+    const err = validatePassword(pw)
+    if (err) ctx.addIssue({ code: z.ZodIssueCode.custom, message: err })
+  }),
   role: z.enum(["ADMIN", "LEAD", "VIEWER"]),
 })
 
