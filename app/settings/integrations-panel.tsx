@@ -9,6 +9,7 @@ import { FormMessage } from "@/components/ui/form-message"
 import { StatusBadge, type BadgeTone } from "@/components/ui/status-badge"
 import { saveGithub, saveGitlab, saveJira, testConnection } from "./actions"
 import { syncGitlabAction } from "./gitlab-actions"
+import { syncJiraAction } from "./jira-actions"
 
 export interface IntegrationView {
   status: "UNCONFIGURED" | "CONNECTED" | "ERROR"
@@ -50,11 +51,13 @@ export function IntegrationsPanel({
   github,
   jira,
   gitlabLastSync,
+  jiraLastSync,
 }: {
   gitlab: IntegrationView
   github?: IntegrationView
   jira: IntegrationView
   gitlabLastSync?: string | null
+  jiraLastSync?: string | null
 }) {
   const [glSave, glSaveAction, glSaving] = useActionState(saveGitlab, undefined)
   const [glTest, glTestAction] = useActionState(testConnection, undefined)
@@ -63,6 +66,7 @@ export function IntegrationsPanel({
   const [ghTest, ghTestAction] = useActionState(testConnection, undefined)
   const [jSave, jSaveAction, jSaving] = useActionState(saveJira, undefined)
   const [jTest, jTestAction] = useActionState(testConnection, undefined)
+  const [jSync, jSyncAction, jSyncing] = useActionState(syncJiraAction, undefined)
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -184,7 +188,22 @@ export function IntegrationsPanel({
             </Button>
           </form>
           <TestForm provider="JIRA" state={jTest} action={jTestAction} />
-          {jira.lastError && !jTest && (
+          <form action={jSyncAction} className="flex items-center gap-3 border-t border-border pt-3">
+            <Button type="submit" size="sm" variant="outline" disabled={jSyncing}>
+              <RefreshCw className={jSyncing ? "size-4 animate-spin" : "size-4"} />
+              {jSyncing ? "Syncing…" : "Sync now"}
+            </Button>
+            <div className="flex-1">
+              {jSync ? (
+                <FormMessage state={jSync} />
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  {jiraLastSync ? `Last sync: ${jiraLastSync}` : "Never synced — pulls issues & sprints for flow metrics."}
+                </span>
+              )}
+            </div>
+          </form>
+          {jira.lastError && !jTest && !jSync && (
             <p className="text-xs text-destructive">Last error: {jira.lastError}</p>
           )}
         </CardContent>

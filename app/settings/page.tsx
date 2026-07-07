@@ -51,7 +51,11 @@ export default async function SettingsPage() {
     : null
   // GitHub cards are hidden unless FEATURE_GITHUB is enabled.
   const github = features.github ? toIntegrationView(intRows.find((r) => r.provider === "GITHUB")) : undefined
-  const jira = toIntegrationView(intRows.find((r) => r.provider === "JIRA"))
+  const jiraRow = intRows.find((r) => r.provider === "JIRA")
+  const jira = toIntegrationView(jiraRow)
+  const jiraLastSync = jiraRow?.lastSyncAt
+    ? jiraRow.lastSyncAt.toISOString().slice(0, 16).replace("T", " ") + " UTC"
+    : null
   const entra = toSsoView(ssoRows.find((r) => r.provider === "ENTRA"))
   const githubOauth = features.github ? toSsoView(ssoRows.find((r) => r.provider === "GITHUB")) : undefined
 
@@ -82,7 +86,7 @@ export default async function SettingsPage() {
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Data sources
           </h2>
-          <IntegrationsPanel gitlab={gitlab} github={github} jira={jira} gitlabLastSync={gitlabLastSync} />
+          <IntegrationsPanel gitlab={gitlab} github={github} jira={jira} gitlabLastSync={gitlabLastSync} jiraLastSync={jiraLastSync} />
         </section>
       </main>
     </div>

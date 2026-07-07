@@ -7,6 +7,7 @@ import {
   pgEnum,
   jsonb,
   boolean,
+  doublePrecision,
 } from "drizzle-orm/pg-core"
 
 export const roleEnum = pgEnum("role", ["ADMIN", "LEAD", "VIEWER"])
@@ -135,6 +136,46 @@ export const gitlabMergeRequests = pgTable("gitlab_merge_request", {
 })
 
 // Per-provider/entity incremental-sync bookkeeping.
+// --- Jira ingestion (scaffold for Flow / Velocity / Quality metrics) ---
+export const jiraIssues = pgTable("jira_issue", {
+  // Jira issue key, e.g. "PROJ-123"
+  id: text("id").primaryKey(),
+  projectKey: text("projectKey"),
+  issueType: text("issueType"), // Story | Bug | Task | Incident | ...
+  status: text("status"),
+  statusCategory: text("statusCategory"), // "To Do" | "In Progress" | "Done"
+  storyPoints: doublePrecision("storyPoints"),
+  sprintId: integer("sprintId"),
+  createdAt: timestamp("createdAt", { mode: "date" }),
+  updatedAt: timestamp("updatedAt", { mode: "date" }),
+  // First transition into an "In Progress" status — for Cycle Time / Work Item Age.
+  inProgressAt: timestamp("inProgressAt", { mode: "date" }),
+  resolvedAt: timestamp("resolvedAt", { mode: "date" }),
+  // Total time (seconds) spent in a blocked status — for Blocked Time.
+  blockedSeconds: integer("blockedSeconds"),
+  labels: jsonb("labels"),
+  ingestedAt: timestamp("ingestedAt", { mode: "date" }).notNull().defaultNow(),
+})
+export const jiraTransitions = pgTable("jira_transition", {
+  // `${issueKey}:${index}`
+  id: text("id").primaryKey(),
+  issueKey: text("issueKey").notNull(),
+  fromStatus: text("fromStatus"),
+  toStatus: text("toStatus"),
+  at: timestamp("at", { mode: "date" }),
+  ingestedAt: timestamp("ingestedAt", { mode: "date" }).notNull().defaultNow(),
+})
+export const jiraSprints = pgTable("jira_sprint", {
+  id: integer("id").primaryKey(),
+  boardId: integer("boardId"),
+  name: text("name"),
+  state: text("state"), // active | closed | future
+  startDate: timestamp("startDate", { mode: "date" }),
+  endDate: timestamp("endDate", { mode: "date" }),
+  completeDate: timestamp("completeDate", { mode: "date" }),
+  ingestedAt: timestamp("ingestedAt", { mode: "date" }).notNull().defaultNow(),
+})
+
 export const syncState = pgTable("sync_state", {
   // `${provider}:${entity}`
   id: text("id").primaryKey(),

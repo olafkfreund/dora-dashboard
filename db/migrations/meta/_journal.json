@@ -43,6 +43,13 @@
       "when": 1783430297324,
       "tag": "0005_many_meteorite",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783433910557,
+      "tag": "0006_large_hulk",
+      "breakpoints": true
     }
   ]
 }
