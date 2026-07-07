@@ -75,7 +75,17 @@ flowchart LR
 
 Templates live in <code>deploy/azure/container-apps/</code>.
 
-### One-command deploy
+Templates come in two flavours — pick whichever your team standardises on:
+- **Bicep** — <code>deploy/azure/container-apps/</code>
+- **Terraform** — <code>deploy/azure/terraform/</code> (with ready-made <code>environments/dev.tfvars</code> and <code>environments/prod.tfvars</code>)
+
+<pre><code># Terraform, per environment
+cd deploy/azure/terraform
+terraform init
+terraform apply -var-file=environments/dev.tfvars
+terraform output app_url</code></pre>
+
+### One-command deploy (Bicep)
 
 <pre><code>cd deploy/azure/container-apps
 RG=dora-rg LOCATION=westeurope ./deploy.sh</code></pre>

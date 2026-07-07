@@ -1,0 +1,15 @@
+# Copy to terraform.tfvars (or use environments/<env>.tfvars) and adjust.
+name        = "dora"
+environment = "dev"
+location    = "westeurope"
+image       = "ghcr.io/olafkfreund/dora-dashboard:latest"
+admin_email = "admin@yourcompany.com"
+
+# Secrets — leave empty to auto-generate, or set explicitly:
+# postgres_admin_password = "change-me"
+# auth_secret             = "openssl rand -base64 48"
+# app_encryption_key      = "openssl rand -base64 32"   # must be 32-byte base64
+
+# Use an external managed DB instead of the bundled one:
+# deploy_postgres = false
+# database_url    = "postgresql://user:pass@host:5432/dora?sslmode=require"

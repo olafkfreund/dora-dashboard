@@ -1,0 +1,9 @@
+name         = "dora"
+environment  = "prod"
+location     = "westeurope"
+cpu          = 1.0
+memory       = "2Gi"
+min_replicas = 2 # always warm
+max_replicas = 6
+postgres_sku = "GP_Standard_D2s_v3"
+admin_email  = "admin@yourcompany.com"
