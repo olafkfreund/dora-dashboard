@@ -86,9 +86,18 @@ postgres:
       cpu: 500m
       memory: 512Mi
 
-## Run migrations + seed as a Helm pre-install/pre-upgrade hook Job.
+## Migrations + seed.
 migrate:
+  # Run as a post-install/upgrade hook Job (needs a schedulable pod slot).
   enabled: true
+  # Run as an initContainer inside the web pod on every start (no extra pod).
+  # Idempotent; ensures schema + bootstrap admin exist even after a DB reset.
+  initContainer: true
+
+## Rolling update strategy. On tiny/at-capacity nodes set maxSurge: 0.
+updateStrategy:
+  maxSurge: 1
+  maxUnavailable: 0
 
 podSecurityContext:
   runAsNonRoot: true

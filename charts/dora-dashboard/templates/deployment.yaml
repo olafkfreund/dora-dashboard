@@ -8,6 +8,13 @@ spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
+  {{- with .Values.updateStrategy }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ .maxSurge }}
+      maxUnavailable: {{ .maxUnavailable }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "dora.selectorLabels" . | nindent 6 }}
@@ -22,6 +29,22 @@ spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.migrate.initContainer }}
+      initContainers:
+        - name: migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - node scripts/migrate.mjs && node scripts/seed.mjs
+          envFrom:
+            - configMapRef:
+                name: {{ include "dora.fullname" . }}-config
+            - secretRef:
+                name: {{ include "dora.secretName" . }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
       {{- end }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}

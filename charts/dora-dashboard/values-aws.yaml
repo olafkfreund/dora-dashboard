@@ -45,7 +45,12 @@ bootstrap:
   adminEmail: admin@dora.local
 
 # Node is at its pod cap (11/11), so the separate migrate Job can't schedule.
-# Run migrations via `kubectl exec deploy/dora-dashboard -- node scripts/migrate.mjs`
-# (and seed) instead. Re-enable once the cluster has more node capacity.
+# Instead the web pod runs migrate+seed as an initContainer (no extra pod).
 migrate:
   enabled: false
+  initContainer: true
+
+# Pod cap is full — terminate the old pod before creating the new one on rollout.
+updateStrategy:
+  maxSurge: 0
+  maxUnavailable: 1
