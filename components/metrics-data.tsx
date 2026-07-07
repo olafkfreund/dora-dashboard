@@ -11,6 +11,7 @@ import {
   Gauge,
   GitPullRequest,
   Hourglass,
+  PieChart,
   ShieldCheck,
   Target,
   Timer,
@@ -291,6 +292,25 @@ const base: Omit<Metric, "accent">[] = [
     insight:
       "Trending down as refinement improves, but upstream requirements gaps remain the top category.",
     history: [42, 40, 38, 36, 35, 33, 32, 31],
+  },
+  {
+    id: "investment-allocation",
+    group: "Velocity & Quality",
+    label: "Investment Allocation",
+    value: "62% feature",
+    sub: "KTLO 18% · Debt 12% · Support 8%",
+    icon: PieChart,
+    trend: "flat",
+    good: "up",
+    source: "Jira",
+    target: "≥ 60% feature",
+    unit: "% of effort",
+    definition:
+      "How engineering effort splits across new feature work, keep-the-lights-on (KTLO), tech-debt, and support — the delivery investment mix.",
+    formula: "story points per category / total story points × 100",
+    insight:
+      "Feature investment is healthy; watch tech-debt if it climbs above ~15% of effort.",
+    history: [58, 59, 60, 61, 60, 62, 61, 62],
   },
 ]
 

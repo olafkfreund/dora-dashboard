@@ -24,7 +24,7 @@ export default async function Home() {
   }
   // Flow + Velocity + Quality from Jira.
   try {
-    const { flow, velocity, quality } = await computeJiraMetrics()
+    const { flow, velocity, quality, allocation } = await computeJiraMetrics()
     if (flow.cycleTime) overrides["cycle-time"] = flow.cycleTime
     if (flow.workItemAge) overrides["work-item-age"] = flow.workItemAge
     if (flow.blockedTime) overrides["blocked-time"] = flow.blockedTime
@@ -32,6 +32,7 @@ export default async function Home() {
     if (velocity.deliveryPredictability) overrides["delivery-predictability"] = velocity.deliveryPredictability
     if (quality.defectEscapeRate) overrides["defect-escape-rate"] = quality.defectEscapeRate
     if (quality.defectRootCause) overrides["defect-root-cause"] = quality.defectRootCause
+    if (allocation.investmentAllocation) overrides["investment-allocation"] = allocation.investmentAllocation
   } catch {
     // Jira not connected — keep sample flow/velocity/quality metrics
   }

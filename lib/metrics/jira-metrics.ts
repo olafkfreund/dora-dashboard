@@ -3,11 +3,12 @@ import { db } from "@/db"
 import { jiraIssues, jiraSprints } from "@/db/schema"
 import { computeFlow, computeVelocity, type FlowResult, type VelocityResult } from "./flow-compute"
 import { computeQuality, type QualityResult } from "./quality-compute"
+import { computeAllocation, type AllocResult } from "./allocation-compute"
 
-/** Compute Jira flow + velocity + quality metrics from ingested data (DB-backed). */
+/** Compute Jira flow + velocity + quality + allocation metrics from ingested data (DB-backed). */
 export async function computeJiraMetrics(
   now = new Date()
-): Promise<{ flow: FlowResult; velocity: VelocityResult; quality: QualityResult }> {
+): Promise<{ flow: FlowResult; velocity: VelocityResult; quality: QualityResult; allocation: AllocResult }> {
   const [issues, sprints] = await Promise.all([
     db
       .select({
@@ -32,9 +33,15 @@ export async function computeJiraMetrics(
       .from(jiraSprints),
   ])
   const qualityRows = issues.map((i) => ({ issueType: i.issueType, labels: (i.labels as string[] | null) ?? null }))
+  const allocRows = issues.map((i) => ({
+    issueType: i.issueType,
+    labels: (i.labels as string[] | null) ?? null,
+    storyPoints: i.storyPoints,
+  }))
   return {
     flow: computeFlow(issues, now),
     velocity: computeVelocity(sprints, issues),
     quality: computeQuality(qualityRows),
+    allocation: computeAllocation(allocRows),
   }
 }
