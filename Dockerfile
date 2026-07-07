@@ -4,7 +4,9 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --include=dev
+# `npm install` (not `npm ci`) reconciles cross-platform optional deps (esbuild),
+# which strict `npm ci` rejects when the lock was generated on a different libc.
+RUN npm install --include=dev --no-audit --no-fund
 
 # ---- builder: compile the Next.js standalone server ----
 FROM node:22-alpine AS builder
