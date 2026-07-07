@@ -96,6 +96,23 @@ export async function getCommitDate(
   }
 }
 
+/** Latest CI pipeline coverage for a project's default branch (for Test Automation Coverage). */
+export async function getLatestCoverage(
+  cfg: GitlabConfig,
+  projectId: number
+): Promise<{ coverage: number | null; ref: string | null } | null> {
+  try {
+    const p = await gitlabGetOne<{ coverage?: number | string | null; ref?: string }>(
+      cfg,
+      `/projects/${projectId}/pipelines/latest`
+    )
+    const cov = p.coverage != null ? Number(p.coverage) : null
+    return { coverage: cov != null && !Number.isNaN(cov) ? cov : null, ref: p.ref ?? null }
+  } catch {
+    return null
+  }
+}
+
 export interface GitlabProject {
   id: number
   path_with_namespace: string

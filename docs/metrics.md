@@ -38,7 +38,7 @@ definition, the exact formula, the target/benchmark, an 8-week trend, and an ins
 <tr><td>Blocked Time</td><td>Jira (blocked status)</td><td><span class="tag-jira">Jira</span></td></tr>
 <tr><td>Delivery Predictability</td><td>Jira sprints</td><td><span class="tag-jira">Jira</span></td></tr>
 <tr><td rowspan="4">Velocity &amp; Quality</td><td>Average Velocity</td><td>Jira sprints</td><td><span class="tag-jira">Jira</span></td></tr>
-<tr><td>Test Automation Coverage</td><td>GitLab CI / test reports</td><td><span class="tag-jira">planned</span></td></tr>
+<tr><td>Test Automation Coverage</td><td>GitLab CI coverage</td><td><span class="tag-jira">GitLab</span></td></tr>
 <tr><td>Defect Escape Rate</td><td>Jira defects + releases</td><td><span class="tag-jira">Jira</span></td></tr>
 <tr><td>Defect Root Cause</td><td>Jira defect categorisation</td><td><span class="tag-jira">Jira</span></td></tr>
 </tbody>
@@ -168,6 +168,18 @@ and hand-off friction.</p>
 </div>
 
 ## Velocity &amp; Quality
+
+<div class="note">
+<strong>How quality &amp; coverage are collected.</strong>
+<strong>Test Automation Coverage</strong> is read from <strong>GitLab CI</strong>: each sync stores
+the coverage % of every project's latest pipeline (<code>pipelines/latest.coverage</code>), and the
+metric is the mean across projects that report coverage — so your pipelines must be configured to
+publish a coverage value. <strong>Defect Escape Rate</strong> and <strong>Defect Root Cause</strong>
+are computed from <strong>Jira defects</strong> (issue type Bug/Defect/Incident) using
+<strong>labels</strong>: a post-release/production label marks an "escaped" defect, and a
+requirements/design/analysis label marks an upstream root cause. Tag your defects with those labels
+and the percentages compute automatically.
+</div>
 
 <div class="metric-doc" markdown="0">
 <h3>Average Velocity <span class="tag-jira">Jira</span></h3>

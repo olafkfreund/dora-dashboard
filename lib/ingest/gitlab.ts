@@ -1,10 +1,11 @@
 import "server-only"
 import { eq, and, isNull, isNotNull } from "drizzle-orm"
 import { db } from "@/db"
-import { gitlabDeployments, gitlabMergeRequests, syncState, integrations } from "@/db/schema"
+import { gitlabDeployments, gitlabMergeRequests, gitlabCoverage, syncState, integrations } from "@/db/schema"
 import {
   getGitlabConfig,
   getCommitDate,
+  getLatestCoverage,
   gitlabPaginate,
   listProjects,
   type GitlabConfig,
@@ -160,6 +161,24 @@ async function backfillCommitDates(cfg: GitlabConfig): Promise<number> {
   return count
 }
 
+/** Store the latest CI coverage per project (best-effort; null where not configured). */
+async function syncCoverage(cfg: GitlabConfig, projects: GitlabProject[]): Promise<number> {
+  let count = 0
+  for (const p of projects) {
+    const cov = await getLatestCoverage(cfg, p.id)
+    if (!cov || cov.coverage == null) continue
+    await db
+      .insert(gitlabCoverage)
+      .values({ projectId: p.id, projectPath: p.path_with_namespace, coverage: cov.coverage, ref: cov.ref })
+      .onConflictDoUpdate({
+        target: gitlabCoverage.projectId,
+        set: { coverage: cov.coverage, ref: cov.ref, projectPath: p.path_with_namespace, updatedAt: new Date() },
+      })
+    count++
+  }
+  return count
+}
+
 /** Incrementally ingest GitLab production deployments + merged MRs into Postgres. */
 export async function syncGitlab(): Promise<SyncResult> {
   const cfg = await getGitlabConfig()
@@ -175,13 +194,14 @@ export async function syncGitlab(): Promise<SyncResult> {
     const deployments = await syncDeployments(cfg, projects)
     const mergeRequests = await syncMergeRequests(cfg, projects)
     const commitsBackfilled = await backfillCommitDates(cfg)
+    const coverage = await syncCoverage(cfg, projects)
     await db
       .update(integrations)
       .set({ status: "CONNECTED", lastSyncAt: new Date(), lastError: null })
       .where(eq(integrations.provider, "GITLAB"))
     return {
       ok: true,
-      message: `Synced ${deployments} '${cfg.prodEnv}' deployment(s), ${mergeRequests} merge request(s), ${commitsBackfilled} commit date(s) across ${projects.length} project(s).`,
+      message: `Synced ${deployments} '${cfg.prodEnv}' deployment(s), ${mergeRequests} merge request(s), ${commitsBackfilled} commit date(s), ${coverage} coverage report(s) across ${projects.length} project(s).`,
       projects: projects.length,
       deployments,
       mergeRequests,

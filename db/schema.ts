@@ -139,6 +139,15 @@ export const gitlabMergeRequests = pgTable("gitlab_merge_request", {
 })
 
 // Per-provider/entity incremental-sync bookkeeping.
+// Latest CI test coverage per project — for Test Automation Coverage.
+export const gitlabCoverage = pgTable("gitlab_coverage", {
+  projectId: integer("projectId").primaryKey(),
+  projectPath: text("projectPath"),
+  coverage: doublePrecision("coverage"),
+  ref: text("ref"),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+})
+
 // --- Jira ingestion (scaffold for Flow / Velocity / Quality metrics) ---
 export const jiraIssues = pgTable("jira_issue", {
   // Jira issue key, e.g. "PROJ-123"
