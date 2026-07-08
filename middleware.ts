@@ -5,6 +5,7 @@ import { authConfig } from "./auth.config"
 export default NextAuth(authConfig).auth
 
 export const config = {
-  // Protect everything except Next internals, auth API, and static assets.
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|assets).*)"],
+  // Protect everything except Next internals, auth API, the secret-guarded digest
+  // trigger (auths via DIGEST_SECRET header, for the CronJob), and static assets.
+  matcher: ["/((?!api/auth|api/digest|_next/static|_next/image|favicon.ico|assets).*)"],
 }

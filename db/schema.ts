@@ -119,6 +119,19 @@ export const metricConfig = pgTable("metric_config", {
   updatedById: text("updatedById"),
 })
 
+// --- Scheduled report digest config (single row "default"). Secret encrypted at rest. ---
+export const digestConfig = pgTable("digest_config", {
+  id: text("id").primaryKey().default("default"),
+  enabled: boolean("enabled").notNull().default(false),
+  channel: text("channel").notNull().default("webhook"), // "email" | "webhook"
+  // Non-secret: { to, from, smtpHost, smtpPort, smtpUser, secure, teamSlug, includePdf }
+  config: jsonb("config").notNull().default({}),
+  // SMTP password (email) or the webhook URL (webhook) — encrypted.
+  encryptedSecret: text("encryptedSecret"),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  updatedById: text("updatedById"),
+})
+
 // --- Teams (squads). A team = a set of GitLab projects + Jira project keys. Audited. ---
 export const teams = pgTable("team", {
   slug: text("slug").primaryKey(),

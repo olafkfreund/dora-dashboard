@@ -123,3 +123,12 @@ securityContext:
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# Scheduled report digest. The app sends it (email or Teams/Slack webhook) when a
+# CronJob POSTs to /api/digest/run with the shared DIGEST_SECRET. Configure the
+# channel/recipients in Settings → Notifications; enable + schedule here.
+digest:
+  enabled: false
+  schedule: "0 8 * * 1" # Mondays 08:00 UTC
+  secret: "" # generated & persisted in the release Secret if empty
+  image: "curlimages/curl:8.10.1"

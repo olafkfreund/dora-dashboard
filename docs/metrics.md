@@ -38,6 +38,16 @@ tier, breakdown tables, and an auto-generated <em>“Needs attention”</em> sec
 fine-tuning the metrics.
 </div>
 
+<div class="note">
+<strong>Scheduled digest.</strong> Under <strong>Settings → Notifications</strong> you can have the
+portal send a recurring <strong>delivery digest</strong> — an <strong>email</strong> (with the PDF
+attached) or a <strong>Teams/Slack</strong> webhook message — summarising each metric's tier and the
+<em>“needs attention”</em> items, optionally scoped to one team. Scheduling is driven by a Kubernetes
+CronJob (enable <code>digest.enabled</code> + <code>digest.schedule</code> in the Helm chart); the app
+sends it when the CronJob calls <code>/api/digest/run</code> with the shared secret. Nothing leaves the
+cluster except your configured mail/webhook target.
+</div>
+
 ## Where the numbers come from
 
 <div class="table-wrap" markdown="0">

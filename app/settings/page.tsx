@@ -6,10 +6,12 @@ import { AppHeader } from "@/components/app-header"
 import { features } from "@/lib/features"
 import { getMetricConfig } from "@/lib/metrics/config-store"
 import { listTeams, distinctAssignables } from "@/lib/teams/store"
+import { getDigestSettings } from "@/lib/digest/store"
 import { IntegrationsPanel, type IntegrationView } from "./integrations-panel"
 import { SsoPanel, type SsoView } from "./sso-panel"
 import { MetricsPanel } from "./metrics-panel"
 import { TeamsPanel } from "./teams-panel"
+import { DigestPanel } from "./digest-panel"
 
 export const metadata = { title: "Settings · DORA Dashboard" }
 
@@ -53,6 +55,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     distinctAssignables(),
     headers(),
   ])
+  const digest = await getDigestSettings()
   const gitlabRow = intRows.find((r) => r.provider === "GITLAB")
   const gitlab = toIntegrationView(gitlabRow)
   const gitlabLastSync = gitlabRow?.lastSyncAt
@@ -110,6 +113,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             Metrics
           </h2>
           <MetricsPanel config={metricCfg} teams={teamList} currentTeam={metricsTeam} />
+        </section>
+
+        <section>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Notifications
+          </h2>
+          <DigestPanel settings={digest} teams={teamList} />
         </section>
       </main>
     </div>
