@@ -1,3 +1,4 @@
+import { FileDown, Sheet } from "lucide-react"
 import { requireUser } from "@/lib/auth-helpers"
 import { AppHeader } from "@/components/app-header"
 import { MetricExplorer, type MetricOverride } from "@/components/metric-explorer"
@@ -79,16 +80,32 @@ export default async function Home() {
       <AppHeader user={user} active="dashboard" />
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <div className="mb-8 flex flex-col gap-2">
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-xs text-muted-foreground">
-            <span className="size-2 rounded-full bg-[color:var(--success)]" />
-            {live
-              ? "Live · DORA-4 from GitLab deployments · other metrics are sample"
-              : "Preview build · sample data · connect GitLab in Settings for live DORA-4"}
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-2">
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-xs text-muted-foreground">
+              <span className="size-2 rounded-full bg-[color:var(--success)]" />
+              {live
+                ? "Live · DORA-4 from GitLab deployments · other metrics are sample"
+                : "Preview build · sample data · connect GitLab in Settings for live DORA-4"}
+            </div>
+            <h2 className="text-2xl font-semibold tracking-tight">
+              Delivery performance overview
+            </h2>
           </div>
-          <h2 className="text-2xl font-semibold tracking-tight">
-            Delivery performance overview
-          </h2>
+          <div className="flex items-center gap-2">
+            <a
+              href="/api/report/pdf"
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+            >
+              <FileDown className="size-4" /> Export PDF
+            </a>
+            <a
+              href="/api/report/csv"
+              className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-muted"
+            >
+              <Sheet className="size-4" /> Export CSV
+            </a>
+          </div>
         </div>
 
         <MetricExplorer overrides={overrides} config={metricConfig} />

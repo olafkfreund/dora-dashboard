@@ -218,6 +218,7 @@ function ModernView({ items, liveIds, onOpen }: ViewProps) {
                 const Icon = m.icon
                 const usesGauge = m.unit === "%"
                 const good = isGood(m.trend, m.good)
+                const noData = m.value === "—"
                 return (
                   <div
                     key={m.id}
@@ -246,16 +247,22 @@ function ModernView({ items, liveIds, onOpen }: ViewProps) {
                       <div className="flex items-center gap-2">
                       {liveIds.has(m.id) && <LiveDot />}
                       <TierBadge metric={m} />
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                          good
-                            ? "bg-[color:var(--success)]/15 text-[color:var(--success)]"
-                            : "bg-destructive/15 text-destructive"
-                        )}
-                      >
-                        {good ? "▲ healthy" : "▼ watch"}
-                      </span>
+                      {noData ? (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                          no data
+                        </span>
+                      ) : (
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                            good
+                              ? "bg-[color:var(--success)]/15 text-[color:var(--success)]"
+                              : "bg-destructive/15 text-destructive"
+                          )}
+                        >
+                          {good ? "▲ healthy" : "▼ watch"}
+                        </span>
+                      )}
                       </div>
                     </div>
 
