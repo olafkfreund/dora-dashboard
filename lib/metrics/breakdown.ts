@@ -5,3 +5,9 @@ export interface MetricBreakdown {
   columns: string[]
   rows: { label: string; values: (string | number)[] }[]
 }
+
+/** Deep-link from a metric to the underlying items in GitLab/Jira. */
+export interface SourceLink {
+  href: string
+  label: string
+}

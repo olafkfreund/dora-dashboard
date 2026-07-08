@@ -1,7 +1,7 @@
 import "server-only"
 import { eq, and, or, isNull, isNotNull } from "drizzle-orm"
 import { db } from "@/db"
-import { gitlabDeployments, gitlabMergeRequests, gitlabCoverage, syncState, integrations } from "@/db/schema"
+import { gitlabDeployments, gitlabMergeRequests, gitlabCoverage, gitlabIncidents, syncState, integrations } from "@/db/schema"
 import {
   getGitlabConfig,
   getCommitDate,
@@ -221,6 +221,53 @@ async function syncCoverage(cfg: GitlabConfig, projects: GitlabProject[]): Promi
 }
 
 /** Incrementally ingest GitLab production deployments + merged MRs into Postgres. */
+interface GitlabIssue {
+  iid: number
+  state: string
+  created_at?: string
+  closed_at?: string
+  updated_at?: string
+}
+
+/** Ingest GitLab incidents (issues typed `incident`) for incident-based MTTR. */
+async function syncIncidents(cfg: GitlabConfig, projects: GitlabProject[]): Promise<number> {
+  const cursorId = "GITLAB:incidents"
+  const cursor = await getCursor(cursorId)
+  const updatedAfter = cursor ?? new Date(Date.now() - 180 * 864e5).toISOString()
+  let count = 0
+  let maxUpdated = cursor ?? updatedAfter
+  for (const project of projects) {
+    const issues = await gitlabPaginate<GitlabIssue>(
+      cfg,
+      `/projects/${project.id}/issues`,
+      { issue_type: "incident", order_by: "updated_at", sort: "desc", updated_after: updatedAfter },
+      10
+    )
+    for (const it of issues) {
+      await db
+        .insert(gitlabIncidents)
+        .values({
+          id: `${project.id}:${it.iid}`,
+          projectId: project.id,
+          iid: it.iid,
+          projectPath: project.path_with_namespace,
+          state: it.state,
+          createdAt: toDate(it.created_at),
+          closedAt: toDate(it.closed_at),
+          ingestedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: gitlabIncidents.id,
+          set: { state: it.state, closedAt: toDate(it.closed_at), ingestedAt: new Date() },
+        })
+      count++
+      if (it.updated_at && it.updated_at > maxUpdated) maxUpdated = it.updated_at
+    }
+  }
+  await setCursor(cursorId, "GITLAB", "incidents", maxUpdated, count)
+  return count
+}
+
 export async function syncGitlab(): Promise<SyncResult> {
   const cfg = await getGitlabConfig()
   if (!cfg) return { ok: false, message: "GitLab is not configured — save a token in Settings first." }
@@ -237,13 +284,14 @@ export async function syncGitlab(): Promise<SyncResult> {
     const commitsBackfilled = await backfillCommitDates(cfg)
     await backfillMrDetails(cfg)
     const coverage = await syncCoverage(cfg, projects)
+    const incidents = await syncIncidents(cfg, projects)
     await db
       .update(integrations)
       .set({ status: "CONNECTED", lastSyncAt: new Date(), lastError: null })
       .where(eq(integrations.provider, "GITLAB"))
     return {
       ok: true,
-      message: `Synced ${deployments} '${cfg.prodEnv}' deployment(s), ${mergeRequests} merge request(s), ${commitsBackfilled} commit date(s), ${coverage} coverage report(s) across ${projects.length} project(s).`,
+      message: `Synced ${deployments} '${cfg.prodEnv}' deployment(s), ${mergeRequests} merge request(s), ${commitsBackfilled} commit date(s), ${coverage} coverage report(s), ${incidents} incident(s) across ${projects.length} project(s).`,
       projects: projects.length,
       deployments,
       mergeRequests,

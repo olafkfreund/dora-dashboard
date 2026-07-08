@@ -50,6 +50,7 @@ export async function saveMetricConfigAction(_prev: ActionState, formData: FormD
       failureStatuses: failureStatuses.length ? failureStatuses : ["failed"],
     },
     windowWeeks: Number(formData.get("windowWeeks")),
+    mttrMode: String(formData.get("mttrMode")) === "incident" ? "incident" : "proxy",
     bands,
   }
 

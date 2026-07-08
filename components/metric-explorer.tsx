@@ -17,6 +17,7 @@ import {
   TrendBadge,
   type Metric,
   type MetricBreakdown,
+  type SourceLink,
 } from "@/components/metrics-data"
 import { classifyTier, type TierTone } from "@/lib/metrics/dora-tier"
 import type { MetricConfig } from "@/lib/metrics/config"
@@ -47,6 +48,7 @@ export type MetricOverride = {
   trend?: "up" | "down" | "flat"
   breakdown?: MetricBreakdown
   note?: string
+  sourceLink?: SourceLink
 }
 
 type ViewProps = {
@@ -326,7 +328,7 @@ export function MetricExplorer({
       metrics.map((m) => {
         const o = overrides?.[m.id]
         return o
-          ? { ...m, value: o.value, sub: o.sub, history: o.history, trend: o.trend ?? m.trend, breakdown: o.breakdown, note: o.note }
+          ? { ...m, value: o.value, sub: o.sub, history: o.history, trend: o.trend ?? m.trend, breakdown: o.breakdown, note: o.note, sourceLink: o.sourceLink }
           : m
       }),
     [overrides]

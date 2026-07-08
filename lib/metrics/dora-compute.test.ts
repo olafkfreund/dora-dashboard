@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { computeDoraFromRows, type DeploymentRow } from "./dora-compute"
+import { computeDoraFromRows, computeIncidentMttr, type DeploymentRow } from "./dora-compute"
 
 const NOW = new Date("2026-06-01T12:00:00Z")
 const DAY = 864e5
@@ -127,6 +127,23 @@ describe("computeDoraFromRows — configurable definition", () => {
     const rows: DeploymentRow[] = [{ projectId: 1, status: "success", finishedAt: at(1), committedAt: null, ref: "main" }]
     const r = computeDoraFromRows(rows, NOW, { deployment: { ...DEF, refPattern: "([" } })
     expect(r.deploymentsTotal).toBe(1)
+  })
+
+  it("computeIncidentMttr = median(closed − created) for in-window incidents", () => {
+    const at = (d: number) => new Date(NOW.getTime() - d * DAY)
+    const incidents = [
+      { createdAt: at(2), closedAt: new Date(at(2).getTime() + 2 * HOUR) }, // 2h
+      { createdAt: at(5), closedAt: new Date(at(5).getTime() + 4 * HOUR) }, // 4h
+      { createdAt: at(400), closedAt: at(399) }, // closed before the window → excluded
+      { createdAt: at(3), closedAt: null }, // still open → excluded
+    ]
+    const m = computeIncidentMttr(incidents, NOW)
+    expect(m?.value).toBe("3.0 hrs") // median(2h, 4h)
+    expect(m?.sub).toMatch(/2 incidents/)
+  })
+
+  it("computeIncidentMttr is undefined with no closed incidents in window", () => {
+    expect(computeIncidentMttr([{ createdAt: NOW, closedAt: null }], NOW)).toBeUndefined()
   })
 
   it("statusBreakdown splits counts by status (window vs all-time)", () => {

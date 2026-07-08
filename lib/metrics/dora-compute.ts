@@ -43,6 +43,11 @@ export interface MrRow {
   firstCommitAt: Date | null
 }
 
+export interface IncidentRow {
+  createdAt: Date | null
+  closedAt: Date | null
+}
+
 /** What counts as a (production) deployment / change failure — from metric config. */
 export interface DeploymentDef {
   /** Environment allowlist; [] = match every environment. */
@@ -256,4 +261,28 @@ export function computeDoraFromRows(rows: DeploymentRow[], now = new Date(), opt
     .sort((a, b) => b.total - a.total)
 
   return result
+}
+
+/** Incident-based MTTR: median(closed − created) over incidents closed in the window. Pure. */
+export function computeIncidentMttr(incidents: IncidentRow[], now = new Date(), weeks = WEEKS): DoraMetric | undefined {
+  const since = new Date(now.getTime() - weeks * 7 * DAY)
+  const wk = (d: Date) => Math.min(weeks - 1, Math.max(0, Math.floor((d.getTime() - since.getTime()) / (7 * DAY))))
+  const all: number[] = []
+  const byWeek: number[][] = Array.from({ length: weeks }, () => [])
+  for (const i of incidents) {
+    if (!i.createdAt || !i.closedAt || i.closedAt < since) continue
+    const ms = i.closedAt.getTime() - i.createdAt.getTime()
+    if (ms > 0) {
+      all.push(ms)
+      byWeek[wk(i.closedAt)].push(ms)
+    }
+  }
+  if (!all.length) return undefined
+  const hist = byWeek.map((w) => Math.round((median(w) / HOUR) * 10) / 10)
+  return {
+    value: fmtDuration(median(all)),
+    sub: `median · ${all.length} incident${all.length === 1 ? "" : "s"}`,
+    history: hist,
+    trend: trendOf(hist),
+  }
 }

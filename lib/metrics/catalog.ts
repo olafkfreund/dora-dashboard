@@ -17,9 +17,9 @@ import {
   Target,
   Timer,
 } from "lucide-react"
-import type { MetricBreakdown } from "@/lib/metrics/breakdown"
+import type { MetricBreakdown, SourceLink } from "@/lib/metrics/breakdown"
 
-export type { MetricBreakdown }
+export type { MetricBreakdown, SourceLink }
 
 export type Trend = "up" | "down" | "flat"
 export type Source =
@@ -53,6 +53,8 @@ export interface Metric {
   breakdown?: MetricBreakdown
   /** Optional data-aware explanation (e.g. why a value is 0), shown in the detail modal. */
   note?: string
+  /** Optional deep-link to the underlying items in GitLab/Jira. */
+  sourceLink?: SourceLink
 }
 
 // Vivid per-metric accent palette (used by the Charts and Modern views).

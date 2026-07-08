@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { X } from "lucide-react"
+import { X, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { TrendBadge, type Metric } from "@/components/metrics-data"
 import { GradientAreaChart } from "@/components/metric-charts"
@@ -101,6 +101,18 @@ export function MetricDialog({
               <p className="text-sm font-medium">{metric.target}</p>
             </div>
           </div>
+
+          {metric.sourceLink && (
+            <a
+              href={metric.sourceLink.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted"
+            >
+              <ExternalLink className="size-3.5" />
+              {metric.sourceLink.label} — see the underlying items
+            </a>
+          )}
 
           <div className="rounded-lg border border-border bg-muted/40 p-4">
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">

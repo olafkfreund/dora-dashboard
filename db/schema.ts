@@ -169,6 +169,18 @@ export const gitlabDeployments = pgTable("gitlab_deployment", {
   ingestedAt: timestamp("ingestedAt", { mode: "date" }).notNull().defaultNow(),
 })
 
+// GitLab Incident Management (issues typed `incident`) — for incident-based MTTR.
+export const gitlabIncidents = pgTable("gitlab_incident", {
+  id: text("id").primaryKey(), // `${projectId}:${iid}`
+  projectId: integer("projectId").notNull(),
+  iid: integer("iid").notNull(),
+  projectPath: text("projectPath"),
+  state: text("state"), // opened | closed
+  createdAt: timestamp("createdAt", { mode: "date" }),
+  closedAt: timestamp("closedAt", { mode: "date" }),
+  ingestedAt: timestamp("ingestedAt", { mode: "date" }).notNull().defaultNow(),
+})
+
 export const gitlabMergeRequests = pgTable("gitlab_merge_request", {
   // `${projectId}:${iid}`
   id: text("id").primaryKey(),

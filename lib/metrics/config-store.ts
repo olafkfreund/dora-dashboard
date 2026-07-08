@@ -12,6 +12,7 @@ function mergePartials(a: PartialMetricConfig, b: PartialMetricConfig): PartialM
   return {
     deployment: { ...(a.deployment ?? {}), ...(b.deployment ?? {}) },
     windowWeeks: b.windowWeeks ?? a.windowWeeks,
+    mttrMode: b.mttrMode ?? a.mttrMode,
     bands: { ...(a.bands ?? {}), ...(b.bands ?? {}) },
     targets: { ...(a.targets ?? {}), ...(b.targets ?? {}) },
   }

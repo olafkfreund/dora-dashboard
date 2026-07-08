@@ -105,6 +105,24 @@ export function MetricsPanel({
               defaultValue={config.windowWeeks}
               className="max-w-32"
             />
+            <div className="space-y-1.5">
+              <label htmlFor="mttrMode" className="text-sm font-medium">
+                MTTR source
+              </label>
+              <select
+                id="mttrMode"
+                name="mttrMode"
+                defaultValue={config.mttrMode}
+                className="w-full max-w-md rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+              >
+                <option value="proxy" className="bg-background text-foreground">
+                  Deploy-recovery proxy (failed → next success)
+                </option>
+                <option value="incident" className="bg-background text-foreground">
+                  GitLab incidents (close − open) — falls back to proxy if none
+                </option>
+              </select>
+            </div>
           </div>
 
           {/* Benchmark bands per DORA metric */}

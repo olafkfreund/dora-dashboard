@@ -1,8 +1,8 @@
 import "server-only"
 import { and, gte, isNotNull, eq, inArray } from "drizzle-orm"
 import { db } from "@/db"
-import { gitlabDeployments, gitlabMergeRequests, integrations } from "@/db/schema"
-import { computeDoraFromRows, type DoraResult } from "./dora-compute"
+import { gitlabDeployments, gitlabMergeRequests, gitlabIncidents, integrations } from "@/db/schema"
+import { computeDoraFromRows, computeIncidentMttr, type DoraResult } from "./dora-compute"
 import { getMetricConfig } from "./config-store"
 import type { TeamFilter } from "@/lib/teams/types"
 
@@ -43,10 +43,22 @@ export async function computeDora(now = new Date(), filter?: TeamFilter | null):
   const leadTimeMode = ((cfgRow[0]?.config as { leadTimeMode?: string })?.leadTimeMode === "gitops"
     ? "gitops"
     : "mr") as "mr" | "gitops"
-  return computeDoraFromRows(rows, now, {
+  const result = computeDoraFromRows(rows, now, {
     mrs,
     leadTimeMode,
     windowWeeks: mc.windowWeeks,
     deployment: mc.deployment,
   })
+
+  // Optional: replace the deploy-recovery proxy MTTR with real incident recovery time.
+  if (mc.mttrMode === "incident" && result.hasData) {
+    const teamInc = glPaths ? inArray(gitlabIncidents.projectPath, glPaths) : undefined
+    const incidents = await db
+      .select({ createdAt: gitlabIncidents.createdAt, closedAt: gitlabIncidents.closedAt })
+      .from(gitlabIncidents)
+      .where(and(isNotNull(gitlabIncidents.closedAt), teamInc))
+    const inc = computeIncidentMttr(incidents, now, mc.windowWeeks)
+    if (inc) result.mttr = { ...inc, note: "Incident-based MTTR — GitLab incidents (close − open)." }
+  }
+  return result
 }

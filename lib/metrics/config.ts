@@ -30,6 +30,8 @@ export const metricConfigSchema = z.object({
     failureStatuses: z.array(z.string()),
   }),
   windowWeeks: z.number().int().positive().max(52),
+  // MTTR source: "proxy" = failed→next-success deploy recovery; "incident" = GitLab incidents (close−open).
+  mttrMode: z.enum(["proxy", "incident"]),
   bands: z.object({
     "deployment-frequency": bandSchema,
     "lead-time-for-changes": bandSchema,
@@ -51,6 +53,7 @@ export const DEFAULT_CONFIG: MetricConfig = {
     failureStatuses: ["failed"],
   },
   windowWeeks: 8,
+  mttrMode: "proxy",
   bands: {
     "deployment-frequency": { elite: 7, high: 1, medium: 0.25 },
     "lead-time-for-changes": { elite: 1, high: 7, medium: 30 }, // days
@@ -64,6 +67,7 @@ export const DEFAULT_CONFIG: MetricConfig = {
 export type PartialMetricConfig = {
   deployment?: Partial<MetricConfig["deployment"]>
   windowWeeks?: number
+  mttrMode?: "proxy" | "incident"
   bands?: Partial<Record<DoraMetricId, Partial<Band>>>
   targets?: Record<string, number>
 }
@@ -77,6 +81,7 @@ export function mergeConfig(p: PartialMetricConfig): MetricConfig {
   return {
     deployment: { ...DEFAULT_CONFIG.deployment, ...(p.deployment ?? {}) },
     windowWeeks: p.windowWeeks ?? DEFAULT_CONFIG.windowWeeks,
+    mttrMode: p.mttrMode ?? DEFAULT_CONFIG.mttrMode,
     bands,
     targets: { ...DEFAULT_CONFIG.targets, ...(p.targets ?? {}) },
   }

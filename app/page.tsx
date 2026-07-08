@@ -8,6 +8,7 @@ import { computeCoverageMetric } from "@/lib/metrics/coverage"
 import { computePrCycleMetric } from "@/lib/metrics/pr-cycle"
 import { getMetricConfig } from "@/lib/metrics/config-store"
 import { getSnapshotSeries } from "@/lib/metrics/snapshot"
+import { getSourceLinks } from "@/lib/metrics/source-links"
 import { resolveTeamFilter, listTeams } from "@/lib/teams/store"
 import { TeamSelector } from "@/components/team-selector"
 
@@ -87,6 +88,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
     }
   } catch {
     // snapshots not ready — keep computed history
+  }
+  // Drill-down: deep-link each live metric to its underlying GitLab/Jira items.
+  try {
+    const srcLinks = await getSourceLinks(teamFilter)
+    for (const [id, link] of Object.entries(srcLinks)) {
+      if (overrides[id]) overrides[id].sourceLink = link
+    }
+  } catch {
+    // integrations not configured — no links
   }
   const live = Object.keys(overrides).length > 0
   const metricConfig = await getMetricConfig(teamSlug)

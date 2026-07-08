@@ -70,12 +70,14 @@ function timeInStage(transitions: TransitionRow[]): MetricBreakdown | undefined 
     }
   }
   const rows = [...durs.entries()]
-    .map(([status, arr]) => ({ status, med: median(arr), n: arr.length }))
-    .sort((a, b) => b.med - a.med)
-    .slice(0, 8)
+    .map(([status, arr]) => ({ status, med: median(arr), n: arr.length, total: arr.reduce((a, b) => a + b, 0) }))
+    // Sort by TOTAL time spent (volume × duration) — the real bottleneck — not by a
+    // single-item median that would float low-sample stages to the top.
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 12)
     .map((r) => ({ label: r.status, values: [`${r.med.toFixed(1)}d`, r.n] }))
   if (!rows.length) return undefined
-  return { title: "Median time in stage (the bottleneck is at the top)", columns: ["Stage", "Median", "Items"], rows }
+  return { title: "Where items spend the most time (by total time in stage)", columns: ["Stage", "Median", "Items"], rows }
 }
 
 export interface FlowResult {
