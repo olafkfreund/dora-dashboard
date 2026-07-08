@@ -5,6 +5,7 @@ import { jiraIssues, jiraSprints, jiraTransitions } from "@/db/schema"
 import { computeFlow, computeVelocity, computeFeatureCycle, type FlowResult, type VelocityResult, type FeatureCycleResult } from "./flow-compute"
 import { computeQuality, type QualityResult } from "./quality-compute"
 import { computeAllocation, type AllocResult } from "./allocation-compute"
+import { getMetricConfig } from "./config-store"
 import type { TeamFilter } from "@/lib/teams/types"
 
 /** Compute Jira flow + velocity + quality + allocation metrics from ingested data (DB-backed). Optional team filter. */
@@ -77,8 +78,9 @@ export async function computeJiraMetrics(
     labels: (i.labels as string[] | null) ?? null,
     storyPoints: i.storyPoints,
   }))
+  const mc = await getMetricConfig(filter?.slug)
   return {
-    flow: computeFlow(flowIssues, now, flowTransitions),
+    flow: computeFlow(flowIssues, now, flowTransitions, mc.blockedStatuses),
     velocity: computeVelocity(sprints, flowIssues),
     quality: computeQuality(qualityRows),
     allocation: computeAllocation(allocRows),

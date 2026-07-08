@@ -58,6 +58,11 @@ export async function saveMetricConfigAction(_prev: ActionState, formData: FormD
       const visible = new Set(formData.getAll("visibleCards").map(String))
       return allMetrics.map((m) => m.id).filter((id) => !visible.has(id))
     })(),
+    // Explicit blocked-status list (comma/newline separated); empty = auto-detect by name.
+    blockedStatuses: String(formData.get("blockedStatuses") ?? "")
+      .split(/[\n,]/)
+      .map((s) => s.trim())
+      .filter(Boolean),
   }
 
   // Validate the fully-merged config (catches NaN band values, out-of-range window, etc.).

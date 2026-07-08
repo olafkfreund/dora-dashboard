@@ -42,6 +42,9 @@ export const metricConfigSchema = z.object({
   targets: z.record(z.string(), z.number()),
   // Metric ids hidden from the dashboard (admin-controlled card visibility).
   hiddenMetrics: z.array(z.string()),
+  // Exact Jira status names that count as "blocked" for Blocked Time. Empty = auto-detect
+  // by name (block/on hold/impediment) using the value stored at ingest.
+  blockedStatuses: z.array(z.string()),
 })
 
 export type MetricConfig = z.infer<typeof metricConfigSchema>
@@ -64,6 +67,7 @@ export const DEFAULT_CONFIG: MetricConfig = {
   },
   targets: {},
   hiddenMetrics: [],
+  blockedStatuses: [],
 }
 
 // A partial config as stored in the DB (any subset of keys, any depth).
@@ -74,6 +78,7 @@ export type PartialMetricConfig = {
   bands?: Partial<Record<DoraMetricId, Partial<Band>>>
   targets?: Record<string, number>
   hiddenMetrics?: string[]
+  blockedStatuses?: string[]
 }
 
 /** Depth-aware merge of a partial config over DEFAULT_CONFIG (missing keys fall back). */
@@ -89,6 +94,7 @@ export function mergeConfig(p: PartialMetricConfig): MetricConfig {
     bands,
     targets: { ...DEFAULT_CONFIG.targets, ...(p.targets ?? {}) },
     hiddenMetrics: p.hiddenMetrics ?? DEFAULT_CONFIG.hiddenMetrics,
+    blockedStatuses: p.blockedStatuses ?? DEFAULT_CONFIG.blockedStatuses,
   }
 }
 

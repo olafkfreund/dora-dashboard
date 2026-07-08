@@ -97,6 +97,12 @@ export function MetricsPanel({
               placeholder="failed"
             />
             <Field
+              label="Jira statuses that count as Blocked (comma-separated; empty = auto-detect by name)"
+              name="blockedStatuses"
+              defaultValue={config.blockedStatuses.join(", ")}
+              placeholder="Blocked, Defect Blocked, On Hold"
+            />
+            <Field
               label="Rolling window (weeks)"
               name="windowWeeks"
               type="number"

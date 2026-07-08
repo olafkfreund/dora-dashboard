@@ -226,7 +226,9 @@ misses.</div>
 <p class="src">Source: Jira blocked/waiting status</p>
 <p><strong>What it measures.</strong> Of the items that were ever blocked, the share of their
 lifetime spent blocked — dependency and hand-off friction. Measuring only blocked items (not all
-work) keeps the number from being diluted; the detail view also shows it as a share of all work.</p>
+work) keeps the number from being diluted; the detail view also shows it as a share of all work.
+Which Jira statuses count as “blocked” is configurable in <strong>Settings → Metrics</strong> (blank
+= auto-detect any status named Blocked/On-Hold/Impediment).</p>
 <code class="formula">sum(time blocked) ÷ sum(lifetime of items that were ever blocked) × 100</code>
 <div class="scenario"><strong>Real-life:</strong> Items waiting on an external API sign-off sit
 “Blocked” for days; if those items spend 20% of their life blocked, that dependency is the drag to

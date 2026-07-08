@@ -119,8 +119,32 @@ function trendOf(history: number[]): "up" | "down" | "flat" {
 
 const fmtDays = (d: number) => `${d.toFixed(1)} days`
 
+/** Per-issue blocked seconds from the status timeline — query-time, using a configurable status set. */
+function blockedSecondsByIssue(issues: FlowIssueRow[], transitions: TransitionRow[], blockedSet: Set<string>, now: Date): Map<string, number> {
+  const byIssue = new Map<string, { toStatus: string | null; at: Date }[]>()
+  for (const t of transitions) {
+    if (!t.at || !t.issueKey) continue
+    const arr = byIssue.get(t.issueKey) ?? []
+    arr.push({ toStatus: t.toStatus, at: t.at })
+    byIssue.set(t.issueKey, arr)
+  }
+  const out = new Map<string, number>()
+  for (const i of issues) {
+    if (!i.key) continue
+    const trs = (byIssue.get(i.key) ?? []).slice().sort((a, b) => a.at.getTime() - b.at.getTime())
+    let sec = 0
+    for (let j = 0; j < trs.length; j++) {
+      if (!blockedSet.has(trs[j].toStatus ?? "")) continue
+      const end = j + 1 < trs.length ? trs[j + 1].at : (i.resolvedAt ?? now)
+      sec += Math.max(0, (end.getTime() - trs[j].at.getTime()) / 1000)
+    }
+    out.set(i.key, sec)
+  }
+  return out
+}
+
 /** Cycle Time, Work Item Age, Blocked Time from Jira issues. */
-export function computeFlow(issues: FlowIssueRow[], now = new Date(), transitions: TransitionRow[] = []): FlowResult {
+export function computeFlow(issues: FlowIssueRow[], now = new Date(), transitions: TransitionRow[] = [], blockedStatuses: string[] = []): FlowResult {
   if (!issues.length) return { hasData: false }
   const since = new Date(now.getTime() - WEEKS * 7 * DAY)
   const weekIdx = (d: Date) => Math.min(WEEKS - 1, Math.max(0, Math.floor((d.getTime() - since.getTime()) / (7 * DAY))))
@@ -147,17 +171,24 @@ export function computeFlow(issues: FlowIssueRow[], now = new Date(), transition
   }
 
   // Blocked Time — share of blocked items' own lifetime spent blocked.
+  // With an explicit blocked-status list, recompute from the status timeline (so admins
+  // can tune which statuses count without a re-sync); otherwise use the ingest-time value.
+  const blockedSet = new Set(blockedStatuses)
+  const recomputed = blockedSet.size ? blockedSecondsByIssue(issues, transitions, blockedSet, now) : null
   let blockedSecs = 0
   let lifetimeSecs = 0 // all items (context only)
   let blockedLifetimeSecs = 0 // only items that were ever blocked (the denominator)
+  let everBlocked = 0
   for (const i of issues) {
     if (!i.createdAt) continue
     const end = i.resolvedAt ?? now
     const life = Math.max(0, (end.getTime() - i.createdAt.getTime()) / 1000)
     lifetimeSecs += life
-    if ((i.blockedSeconds ?? 0) > 0) {
-      blockedSecs += i.blockedSeconds ?? 0
+    const bs = recomputed ? (recomputed.get(i.key ?? "") ?? 0) : (i.blockedSeconds ?? 0)
+    if (bs > 0) {
+      blockedSecs += bs
       blockedLifetimeSecs += life
+      everBlocked++
     }
   }
 
@@ -198,7 +229,6 @@ export function computeFlow(issues: FlowIssueRow[], now = new Date(), transition
       },
     }
   }
-  const everBlocked = issues.filter((i) => (i.blockedSeconds ?? 0) > 0).length
   if (everBlocked > 0 && blockedLifetimeSecs > 0) {
     const pct = Math.round((blockedSecs / blockedLifetimeSecs) * 1000) / 10
     const blockedDays = blockedSecs / 86400

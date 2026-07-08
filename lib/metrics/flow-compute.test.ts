@@ -41,6 +41,20 @@ describe("computeFlow", () => {
     expect(computeFlow(rows, NOW).blockedTime?.value).toBe("10%")
   })
 
+  it("recomputes blocked time from transitions when blocked statuses are configured", () => {
+    // Item lifetime 10d. It enters "Defect In Review / Blocked" (a review state we DON'T
+    // count) at d8→d6, then real "Blocked" at d4→d2 (2d). With the list = ["Blocked"] only
+    // the 2d counts → 2/10 = 20%.
+    const rows = [issue({ key: "X-1", createdAt: d(10), resolvedAt: NOW, statusCategory: "Done", blockedSeconds: 9 * DAY / 1000 })]
+    const transitions = [
+      { issueKey: "X-1", toStatus: "Defect In Review / Blocked", at: d(8) },
+      { issueKey: "X-1", toStatus: "In Progress", at: d(6) },
+      { issueKey: "X-1", toStatus: "Blocked", at: d(4) },
+      { issueKey: "X-1", toStatus: "In Progress", at: d(2) },
+    ]
+    expect(computeFlow(rows, NOW, transitions, ["Blocked"]).blockedTime?.value).toBe("20%")
+  })
+
   it("blocked time denominator excludes never-blocked items", () => {
     // Blocked item: lifetime 10d, blocked 2d. A never-blocked item shouldn't dilute it.
     const rows = [
