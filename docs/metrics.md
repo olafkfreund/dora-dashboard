@@ -259,6 +259,22 @@ long cycle time — usually a sign it should have been split into smaller, indep
 slices.</div>
 </div>
 
+<div class="metric-doc" markdown="0">
+<h3>PR Cycle Time <span class="tag-live">live</span></h3>
+<p class="src">Source: GitLab merged merge requests</p>
+<p><strong>What it measures.</strong> How long a change takes from its first commit to merge, split
+into <strong>Coding → Pickup → Review → Deploy</strong> stages so you can see where merge requests
+wait.</p>
+<code class="formula">median(first commit → merge) across merged MRs; median per stage</code>
+<p>The headline is measured across every merged MR. Because <strong>Pickup</strong> and
+<strong>Review</strong> need a review timestamp, those two stages are measured from the subset of MRs
+that have one — so the detail view shows each stage’s median <em>and how many MRs it came from</em>,
+and the stages don’t necessarily sum to the total.</p>
+<div class="scenario"><strong>Real-life:</strong> If the total is 14h but Pickup is 19h across the
+reviewed MRs, the wait is reviewers <em>starting</em> the review — an assignment/SLA problem, not
+slow reviewing.</div>
+</div>
+
 ## Velocity &amp; Quality
 
 <div class="note">

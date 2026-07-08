@@ -83,6 +83,22 @@ export function computePrCycle(mrs: PrMrRow[], deployBySha: Map<string, Date>, n
       .filter(Boolean)
       .join(" · ") || "insufficient MR data"
 
+  // Drill-down: median + sample size per stage. Stages come from different MR subsets
+  // (Pickup/Review need a review timestamp), so they don't necessarily sum to the total.
+  const stageRow = (label: string, arr: number[]) =>
+    arr.length ? { label, values: [compact(median(arr)), arr.length] } : null
+  const rows = [
+    stageRow("Coding (commit → open)", coding),
+    stageRow("Pickup (open → first review)", pickup),
+    stageRow("Review (first review → merge)", review),
+    stageRow("Deploy (merge → prod)", deploy),
+  ].filter((r): r is { label: string; values: (string | number)[] } => r !== null)
+
+  const note =
+    review.length < total.length
+      ? `Headline = first commit → merge across ${total.length} merged MRs. Pickup and Review are measured only on the ${review.length} MR(s) that carry a review timestamp, so the stages don't sum to the total.`
+      : undefined
+
   return {
     hasData: true,
     prCycleTime: {
@@ -90,6 +106,10 @@ export function computePrCycle(mrs: PrMrRow[], deployBySha: Map<string, Date>, n
       sub,
       history: [],
       trend: "flat",
+      note,
+      breakdown: rows.length
+        ? { title: "Median time per stage", columns: ["Stage", "Median", "MRs"], rows }
+        : undefined,
     },
   }
 }

@@ -116,6 +116,7 @@ const TOC = [
   ["reports", "8 · Reports & scheduled digest"],
   ["using", "Using the dashboard"],
   ["at-a-glance", "At a glance"],
+  ["metrics-derived", "How each metric is calculated"],
 ] as const
 
 /* ---------------------------------- page ---------------------------------- */
@@ -307,7 +308,9 @@ export default async function HelpPage() {
               rows={[
                 ["Production environments", <>only deployments to these environment names count. Comma-separated; <strong>blank = every environment</strong>.</>],
                 ["Ref / branch pattern", <>regex the deployment ref must match, e.g. <C>^(main|release/.*)$</C>. Blank = any.</>],
-                ["Failure statuses", <>which deployment statuses count as a change failure (drives CFR &amp; MTTR). Default <C>failed</C>.</>],
+                ["Failure statuses", <>which deployment statuses count as a change failure (deploy-status fallback for CFR). Default <C>failed</C>.</>],
+                ["Blocked statuses", <>which Jira statuses count as <strong>Blocked</strong> for Blocked Time (comma-separated). Blank = auto-detect any status named Blocked / On-Hold / Impediment. A status like <C>Defect In Review / Blocked</C> may be a review state, not a true impediment — set the list to exclude it.</>],
+                ["Visible cards", <>tick / untick to show or hide any metric card on the dashboard (per org or per team).</>],
                 ["Rolling window", "number of weeks of history each metric is computed over (default 8)."],
                 ["Benchmark bands", "the Elite / High / Medium thresholds per DORA metric (Low is anything beyond Medium)."],
               ]}
@@ -360,13 +363,15 @@ export default async function HelpPage() {
           <Section
             id="decisions"
             icon={SlidersHorizontal}
-            title="7 · Two metric decisions"
-            intro="Two toggles shape how a couple of metrics are measured."
+            title="7 · How key metrics are sourced"
+            intro="A few metrics can be measured more than one way — here's what drives them and how to switch."
           >
             <KV
               rows={[
                 ["Lead Time", "Keep GitOps (deploy-commit ≈ 0 for infra repos) or measure from the feature MR's first commit (more meaningful for feature-branch workflows)."],
-                ["MTTR", "Keep the deploy-recovery proxy (failed → next success) or record incidents in GitLab and switch to incident open→close."],
+                ["Change Failure Rate", <>Read from Jira <strong>Incidents + Production-environment defects</strong> ÷ production deployments — a failed GitLab deploy <em>job</em> is a job error, not a production failure. Falls back to failed-deploy-status when no incident data exists.</>],
+                ["MTTR", <>Incident recovery from Jira Incidents + Production defects (<C>resolved − created</C>); or the deploy-recovery proxy (failed → next success). Switch via <strong>MTTR source</strong>.</>],
+                ["Blocked Time", <>Which Jira statuses count as blocked is configurable (blank = auto-detect). Measured against the lifetime of items that were <em>ever</em> blocked, so it isn&apos;t diluted by all other work.</>],
               ]}
             />
           </Section>
@@ -453,11 +458,76 @@ export default async function HelpPage() {
             <KV
               rows={[
                 ["DORA-4 (4 metrics)", "GitLab token + group + production environment"],
-                ["Flow + Velocity + Quality (7 metrics)", "Jira URL + email + API token (+ defect labels)"],
+                ["Flow + Velocity + Quality (7 metrics)", "Jira URL + email + API token"],
                 ["Test Automation Coverage (1 metric)", "GitLab pipelines that publish coverage"],
                 ["Enterprise sign-in", "Entra ID (and/or GitHub OAuth) app registration"],
               ]}
             />
+          </Section>
+
+          {/* How each metric is calculated */}
+          <Section
+            id="metrics-derived"
+            icon={FlaskConical}
+            title="How each metric is calculated (fields & formulas)"
+            intro={
+              <>
+                Every metric is computed from ingested data, never a live query. Jira custom fields
+                vary per instance, so the ingestor <strong>auto-detects them by name</strong> (the IDs
+                shown are this instance&apos;s). From each issue&apos;s changelog we derive{" "}
+                <C>inProgressAt</C>, <C>resolvedAt</C> and <C>blockedSeconds</C> once at ingest. The{" "}
+                <strong>full window</strong> of issues is ingested, and <strong>sub-tasks are
+                excluded</strong> from flow, velocity and allocation (they sit under Stories and would
+                double-count).
+              </>
+            }
+          >
+            <p className="mb-2 text-sm font-medium">DORA-4 — GitLab (change failures from Jira)</p>
+            <KV
+              rows={[
+                ["Deployment Frequency", "successful production deployments ÷ weeks in the window."],
+                ["Lead Time for Changes", "median(deployment finished − deployed commit / MR first commit)."],
+                ["Change Failure Rate", <>Jira <strong>Incidents + Production-environment defects</strong> in the window ÷ GitLab production deployments (falls back to failed deploy status if no incident data).</>],
+                ["Mean Time to Restore", "median(resolved − created) of Jira Incidents + Production defects; or the deploy-recovery proxy."],
+              ]}
+            />
+            <p className="mb-2 mt-5 text-sm font-medium">Flow, Velocity &amp; Quality — Jira</p>
+            <KV
+              rows={[
+                ["Cycle Time", "median(resolved − work-started) for completed items (excludes sub-tasks)."],
+                ["Work Item Age", "mean(now − work-started) for open in-progress items."],
+                ["Blocked Time", <>time in a blocked status ÷ lifetime of the items that were <em>ever</em> blocked (blocked statuses configurable).</>],
+                ["Feature Cycle Time", <>median(resolved − started) across <strong>Features</strong> (parent issue type); breakdown by Program Increment.</>],
+                ["Average Velocity", <>mean completed <strong>story points</strong> (<C>Story Points</C> field) per <strong>Program Increment</strong> (P1–P6) — the team plans in PIs, not sprints.</>],
+                ["Delivery Predictability", "completed ÷ committed story points per Program Increment (mean across PIs)."],
+                ["Investment Allocation", "story points (weighted) by issue type + labels → Feature / KTLO / Tech-debt / Support."],
+                ["Defect Escape Rate", <>defects whose <strong>Environment Type</strong> is Production ÷ defects with an environment set.</>],
+                ["Defect Root Cause", <>defects grouped by the <strong>Root Cause Analysis</strong> field; headline = (Requirements + Design) ÷ triaged defects.</>],
+                ["Test Automation Coverage", "mean of each project's latest GitLab CI pipeline coverage %."],
+                ["PR Cycle Time", "median(first commit → merge) across merged MRs, split into Coding / Pickup / Review / Deploy stages."],
+              ]}
+            />
+            <div className="mt-4 space-y-3">
+              <Note>
+                <strong>Jira fields used (auto-detected by name).</strong> Story Points (<C>cf10002</C>,
+                preferred over the sparsely-used &ldquo;Story point estimate&rdquo;), Program Increment
+                (<C>cf10001</C>, P1–P6), parent <strong>Feature</strong>, Root Cause Analysis (
+                <C>cf10004</C>), Environment Type (<C>cf10005</C>). If a field is absent on another
+                instance, the metric falls back to labels.
+              </Note>
+              <Note>
+                <strong>Why change failures come from Jira.</strong> GitLab showed all deploys
+                succeeding and 0 failed, so a deploy-status CFR reads a misleading 0%. The real failure
+                signal — production incidents and production defects — lives in Jira, so CFR and
+                incident-MTTR read from there.
+              </Note>
+              <Note>
+                <strong>Blocked Time is measured against blocked items only.</strong> Dividing by every
+                item&apos;s lifetime diluted it to ~1%; using just the items that were ever blocked
+                gives an honest figure. Which statuses count is configurable, because a status like{" "}
+                <C>Defect In Review / Blocked</C> can be a review state rather than a true impediment.
+              </Note>
+            </div>
           </Section>
         </div>
       </main>

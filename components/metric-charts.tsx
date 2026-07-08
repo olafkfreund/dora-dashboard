@@ -139,7 +139,11 @@ export function BarChart({
       aria-label="Per-period bar chart"
     >
       {data.map((v, i) => {
-        const bh = pad + ((v - min) / span) * (height - pad * 2) * 0.92 + 4
+        // Amplify: a 30% floor so bars always read as a chart, the rest scaled to the
+        // tight min–max range so small period-to-period variation is clearly visible.
+        const norm = (v - min) / span
+        const usable = height - pad * 2
+        const bh = pad + (0.3 + 0.68 * norm) * usable
         const x = pad + i * (bw + gap)
         const y = height - bh
         return (
@@ -162,6 +166,42 @@ export function BarChart({
         )
       })}
     </svg>
+  )
+}
+
+/**
+ * Charts-view mini-viz. Shows amplified bars when the series has real variation;
+ * otherwise an intentional "steady / trend building" indicator instead of flat equal
+ * bars (point-in-time metrics have thin snapshot history until it accumulates).
+ */
+export function MiniViz({
+  data,
+  color,
+  height = 88,
+  animate = false,
+}: {
+  data: number[]
+  color: string
+  height?: number
+  animate?: boolean
+}) {
+  const clean = data.filter((v) => typeof v === "number" && !Number.isNaN(v))
+  const distinct = new Set(clean.map((v) => Math.round(v * 100))).size
+  if (clean.length >= 2 && distinct > 1) {
+    return <BarChart data={clean} color={color} height={height} animate={animate} />
+  }
+  const label = clean.length >= 2 ? "steady" : "trend building"
+  return (
+    <div className="flex flex-col items-center justify-center gap-2" style={{ height }} role="img" aria-label={label}>
+      <div className="relative h-2 w-[85%] overflow-hidden rounded-full" style={{ backgroundColor: `${color}22` }}>
+        <div
+          className="absolute inset-y-0 left-0 rounded-full"
+          style={{ width: "100%", background: `linear-gradient(90deg, ${color}33, ${color})` }}
+        />
+        <span className="absolute right-0 top-1/2 size-2.5 -translate-y-1/2 rounded-full ring-2 ring-background" style={{ backgroundColor: color }} />
+      </div>
+      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</span>
+    </div>
   )
 }
 

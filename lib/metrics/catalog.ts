@@ -338,7 +338,7 @@ const base: Omit<Metric, "accent" | "sourceDetail">[] = [
       "Time from a change's first commit to merge, broken into Coding, Pickup, Review and Deploy stages — pinpoints where merge requests wait.",
     formula: "median per stage across merged MRs (coding → pickup → review → deploy)",
     insight:
-      "Review wait is typically the largest stage — reviewer SLAs or smaller MRs move it the most.",
+      "Pickup (waiting for a reviewer to start) is often the largest stage. The breakdown shows each stage's median and how many MRs it was measured from.",
     history: [2.2, 2.1, 2.0, 1.9, 1.8, 1.7, 1.6, 1.6],
   },
   {

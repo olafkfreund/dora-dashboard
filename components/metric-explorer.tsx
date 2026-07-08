@@ -22,9 +22,9 @@ import {
 import { classifyTier, type TierTone } from "@/lib/metrics/dora-tier"
 import type { MetricConfig } from "@/lib/metrics/config"
 import {
-  BarChart,
   CountUp,
   GradientAreaChart,
+  MiniViz,
   RadialGauge,
 } from "@/components/metric-charts"
 import { MetricDialog } from "@/components/metric-dialog"
@@ -190,7 +190,7 @@ function ChartsView({ items, liveIds, onOpen }: ViewProps) {
                       </div>
                     </CardHeader>
                     <CardContent className="pt-2">
-                      <BarChart data={m.history} color={m.accent} height={88} />
+                      <MiniViz data={m.history} color={m.accent} height={88} />
                       <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                         <span>Target: {m.target}</span>
                         <span className="font-medium text-primary">Details →</span>
