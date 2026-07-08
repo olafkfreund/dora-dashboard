@@ -228,10 +228,11 @@ slices.</div>
 the coverage % of every project's latest pipeline (<code>pipelines/latest.coverage</code>), and the
 metric is the mean across projects that report coverage — so your pipelines must be configured to
 publish a coverage value. <strong>Defect Escape Rate</strong> and <strong>Defect Root Cause</strong>
-are computed from <strong>Jira defects</strong> (issue type Bug/Defect/Incident) using
-<strong>labels</strong>: a post-release/production label marks an "escaped" defect, and a
-requirements/design/analysis label marks an upstream root cause. Tag your defects with those labels
-and the percentages compute automatically.
+are computed from <strong>Jira defects</strong> (issue type Bug/Defect/Incident) using the team's
+dedicated defect fields: <strong>Environment Type</strong> (Production / Pre-Prod / Non-Prod) drives
+the escape rate, and <strong>Root Cause Analysis</strong> (Requirements, Design, Code, Change,
+Environment/Ops, plus a triage state) drives root cause. If those fields aren't present on an
+instance, the portal falls back to label-based classification.
 </div>
 
 <div class="metric-doc" markdown="0">
@@ -258,7 +259,7 @@ precedes a falling Change Failure Rate. Collected from GitLab CI coverage/test-r
 <p class="src">Source: Jira defects vs releases</p>
 <p><strong>What it measures.</strong> Share of defects found <em>after</em> release vs before —
 lower means issues are caught earlier.</p>
-<code class="formula">defects found post-release / total defects × 100</code>
+<code class="formula">defects with Environment Type = Production ÷ defects with an environment × 100</code>
 <div class="scenario"><strong>Real-life:</strong> If 6% of defects are found by customers after
 release, that is your “escape” rate; it should fall as automation coverage rises.</div>
 </div>
@@ -268,7 +269,7 @@ release, that is your “escape” rate; it should fall as automation coverage r
 <p class="src">Source: Jira defect categorisation</p>
 <p><strong>What it measures.</strong> Proportion of defects requiring rework due to
 <em>upstream</em> causes (requirements, design, dependencies).</p>
-<code class="formula">upstream-caused defects / total defects × 100</code>
+<code class="formula">requirements+design ÷ triaged defects × 100 (from Root Cause Analysis)</code>
 <div class="scenario"><strong>Real-life:</strong> If 31% of defects trace to unclear
 requirements, the highest-leverage fix is refinement/BA quality, not more testing.</div>
 </div>

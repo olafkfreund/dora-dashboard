@@ -29,6 +29,8 @@ export async function computeJiraMetrics(
         storyPoints: jiraIssues.storyPoints,
         sprintId: jiraIssues.sprintId,
         programIncrement: jiraIssues.programIncrement,
+        rootCause: jiraIssues.rootCause,
+        defectEnv: jiraIssues.defectEnv,
         createdAt: jiraIssues.createdAt,
         inProgressAt: jiraIssues.inProgressAt,
         resolvedAt: jiraIssues.resolvedAt,
@@ -69,7 +71,7 @@ export async function computeJiraMetrics(
   const flowKeys = new Set(flowIssues.map((i) => i.key))
   const flowTransitions = transitions.filter((t) => t.issueKey != null && flowKeys.has(t.issueKey))
 
-  const qualityRows = issues.map((i) => ({ issueType: i.issueType, labels: (i.labels as string[] | null) ?? null }))
+  const qualityRows = issues.map((i) => ({ issueType: i.issueType, labels: (i.labels as string[] | null) ?? null, rootCause: i.rootCause, defectEnv: i.defectEnv }))
   const allocRows = flowIssues.map((i) => ({
     issueType: i.issueType,
     labels: (i.labels as string[] | null) ?? null,

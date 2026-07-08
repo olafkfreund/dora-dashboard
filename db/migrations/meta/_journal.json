@@ -120,6 +120,13 @@
       "when": 1783525960118,
       "tag": "0016_jira_pi_feature",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1783530758259,
+      "tag": "0017_jira_defect_fields",
+      "breakpoints": true
     }
   ]
 }

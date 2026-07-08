@@ -56,6 +56,8 @@ export interface JiraFieldIds {
   storyPointsAlt?: string
   sprint?: string
   programIncrement?: string
+  rootCause?: string
+  defectEnv?: string
 }
 
 /** Auto-detect the custom-field ids (they vary per instance). Prefers the classic "Story Points". */
@@ -69,6 +71,8 @@ export async function detectFieldIds(cfg: JiraConfig): Promise<JiraFieldIds> {
       storyPointsAlt: byName("story point estimate"),
       sprint: byName("sprint"),
       programIncrement: byName("program increment"),
+      rootCause: byName("root cause analysis") ?? byName("root cause"),
+      defectEnv: byName("environment type"),
     }
   } catch {
     return {}

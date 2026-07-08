@@ -222,6 +222,9 @@ export const jiraIssues = pgTable("jira_issue", {
   // SAFe Program Increment (e.g. "PI5") and the parent Feature key (e.g. "DEMO-4954").
   programIncrement: text("programIncrement"),
   parentKey: text("parentKey"),
+  // Defect fields: Root Cause Analysis + Environment Type (option values).
+  rootCause: text("rootCause"),
+  defectEnv: text("defectEnv"),
   createdAt: timestamp("createdAt", { mode: "date" }),
   updatedAt: timestamp("updatedAt", { mode: "date" }),
   // First transition into an "In Progress" status — for Cycle Time / Work Item Age.

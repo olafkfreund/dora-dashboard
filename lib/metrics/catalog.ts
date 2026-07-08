@@ -279,7 +279,7 @@ const base: Omit<Metric, "accent" | "sourceDetail">[] = [
     unit: "%",
     definition:
       "Share of defects found after release versus before release. Lower means issues are caught earlier.",
-    formula: "defects found post-release / total defects × 100",
+    formula: "defects with Environment Type = Production ÷ defects with an environment × 100",
     insight:
       "Falling as automation coverage rises, but still above the 5% target.",
     history: [9.2, 8.7, 8.1, 7.6, 7.1, 6.8, 6.4, 6.1],
@@ -298,7 +298,7 @@ const base: Omit<Metric, "accent" | "sourceDetail">[] = [
     unit: "%",
     definition:
       "Proportion of defects requiring rework due to upstream causes (requirements, design, dependencies).",
-    formula: "upstream-caused defects / total defects × 100",
+    formula: "requirements+design ÷ triaged defects × 100, from the Root Cause Analysis field",
     insight:
       "Trending down as refinement improves, but upstream requirements gaps remain the top category.",
     history: [42, 40, 38, 36, 35, 33, 32, 31],
@@ -374,8 +374,8 @@ const SOURCE_DETAIL: Record<string, string> = {
   "delivery-predictability": "Jira — completed vs committed story points per Program Increment (P1–P6).",
   "average-velocity": "Jira — mean completed story points per Program Increment (P1–P6); needs story-pointed issues.",
   "test-automation-coverage": "GitLab CI — mean of each project's latest pipeline coverage value.",
-  "defect-escape-rate": "Jira — defects labelled post-release/production, divided by all defects.",
-  "defect-root-cause": "Jira — defects labelled with an upstream root cause (requirements/design/analysis), divided by all defects.",
+  "defect-escape-rate": "Jira — defects whose Environment Type is Production, divided by defects with an environment set.",
+  "defect-root-cause": "Jira — defects grouped by the Root Cause Analysis field; headline = requirements+design share of triaged defects.",
   "investment-allocation": "Jira — story points (unpointed issues weighted as 1) split across feature / KTLO / tech-debt / support by issue type + labels.",
   "pr-cycle-time": "GitLab — merged merge requests broken into Coding, Pickup, Review and Deploy stages (median per stage).",
   "feature-cycle-time": "Jira — median (resolved − work-started) across resolved Features (the parent issue type), with Program Increment.",

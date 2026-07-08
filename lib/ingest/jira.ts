@@ -77,9 +77,19 @@ async function syncIssues(cfg: JiraConfig, fieldIds: JiraFieldIds): Promise<numb
   const fields = [
     "summary", "status", "issuetype", "created", "updated", "resolutiondate", "labels", "parent",
     fieldIds.storyPoints, fieldIds.storyPointsAlt, fieldIds.sprint, fieldIds.programIncrement,
+    fieldIds.rootCause, fieldIds.defectEnv,
   ]
     .filter(Boolean)
     .join(",")
+
+  // Single-select custom fields come back as { value } (or { name }).
+  const optOf = (f: Record<string, unknown>, id?: string): string | null => {
+    if (!id) return null
+    const v = f[id]
+    if (typeof v === "string") return v
+    if (v && typeof v === "object") return ((v as { value?: string; name?: string }).value ?? (v as { name?: string }).name) || null
+    return null
+  }
 
   // Coalesce the two story-point fields (classic "Story Points" preferred).
   const storyPointsOf = (f: Record<string, unknown>): number | null => {
@@ -109,6 +119,8 @@ async function syncIssues(cfg: JiraConfig, fieldIds: JiraFieldIds): Promise<numb
     const programIncrement = piOf(f)
     const parentKey = (f.parent as { key?: string })?.key ?? null
     const storyPoints = storyPointsOf(f)
+    const rootCause = optOf(f, fieldIds.rootCause)
+    const defectEnv = optOf(f, fieldIds.defectEnv)
 
     issueRows.push({
       id: issue.key,
@@ -121,6 +133,8 @@ async function syncIssues(cfg: JiraConfig, fieldIds: JiraFieldIds): Promise<numb
       sprintId: fieldIds.sprint ? sprintIdFromField(f[fieldIds.sprint]) : null,
       programIncrement,
       parentKey,
+      rootCause,
+      defectEnv,
       createdAt,
       updatedAt: toDate(f.updated),
       inProgressAt,
@@ -154,6 +168,8 @@ async function syncIssues(cfg: JiraConfig, fieldIds: JiraFieldIds): Promise<numb
           sprintId: sql`excluded."sprintId"`,
           programIncrement: sql`excluded."programIncrement"`,
           parentKey: sql`excluded."parentKey"`,
+          rootCause: sql`excluded."rootCause"`,
+          defectEnv: sql`excluded."defectEnv"`,
           updatedAt: sql`excluded."updatedAt"`,
           inProgressAt: sql`excluded."inProgressAt"`,
           resolvedAt: sql`excluded."resolvedAt"`,
