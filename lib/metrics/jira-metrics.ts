@@ -1,15 +1,24 @@
 import "server-only"
+import { inArray } from "drizzle-orm"
 import { db } from "@/db"
 import { jiraIssues, jiraSprints, jiraTransitions } from "@/db/schema"
 import { computeFlow, computeVelocity, type FlowResult, type VelocityResult } from "./flow-compute"
 import { computeQuality, type QualityResult } from "./quality-compute"
 import { computeAllocation, type AllocResult } from "./allocation-compute"
+import type { TeamFilter } from "@/lib/teams/types"
 
-/** Compute Jira flow + velocity + quality + allocation metrics from ingested data (DB-backed). */
+/** Compute Jira flow + velocity + quality + allocation metrics from ingested data (DB-backed). Optional team filter. */
 export async function computeJiraMetrics(
-  now = new Date()
+  now = new Date(),
+  filter?: TeamFilter | null
 ): Promise<{ flow: FlowResult; velocity: VelocityResult; quality: QualityResult; allocation: AllocResult }> {
-  const [issues, sprints, transitions] = await Promise.all([
+  const jiraKeys = filter?.jiraProjectKeys
+  // A team with no Jira keys has no Jira-derived metrics.
+  if (filter && (!jiraKeys || jiraKeys.length === 0)) {
+    return { flow: { hasData: false }, velocity: { hasData: false }, quality: { hasData: false }, allocation: { hasData: false } }
+  }
+  const teamIssueWhere = jiraKeys ? inArray(jiraIssues.projectKey, jiraKeys) : undefined
+  const [issues, allSprints, allTransitions] = await Promise.all([
     db
       .select({
         issueType: jiraIssues.issueType,
@@ -22,7 +31,8 @@ export async function computeJiraMetrics(
         resolvedAt: jiraIssues.resolvedAt,
         blockedSeconds: jiraIssues.blockedSeconds,
       })
-      .from(jiraIssues),
+      .from(jiraIssues)
+      .where(teamIssueWhere),
     db
       .select({
         id: jiraSprints.id,
@@ -40,6 +50,15 @@ export async function computeJiraMetrics(
       })
       .from(jiraTransitions),
   ])
+  // Scope sprints/transitions to the team (issues are already filtered via WHERE).
+  let sprints = allSprints
+  let transitions = allTransitions
+  if (jiraKeys) {
+    const keySet = new Set(jiraKeys)
+    const teamSprintIds = new Set(issues.map((i) => i.sprintId).filter((x): x is number => x != null))
+    sprints = allSprints.filter((s) => teamSprintIds.has(s.id))
+    transitions = allTransitions.filter((t) => t.issueKey != null && keySet.has(t.issueKey.split("-")[0]))
+  }
   const qualityRows = issues.map((i) => ({ issueType: i.issueType, labels: (i.labels as string[] | null) ?? null }))
   const allocRows = issues.map((i) => ({
     issueType: i.issueType,

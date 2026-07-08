@@ -1,17 +1,19 @@
 import { auth } from "@/auth"
 import { buildReport } from "@/lib/report/report-data"
 import { renderReportPdf } from "@/lib/report/report-document"
+import { resolveTeamFilter } from "@/lib/teams/store"
 
 export const runtime = "nodejs"
 
 // Branded PDF delivery report (colored metric cards, breakdowns, needs-attention).
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth()
   if (!session?.user?.id) {
     return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
   }
 
-  const report = await buildReport()
+  const filter = await resolveTeamFilter(new URL(req.url).searchParams.get("team"))
+  const report = await buildReport(new Date(), filter)
   const pdf = await renderReportPdf(report)
   const stamp = report.generatedAt.toISOString().slice(0, 10)
   return new Response(new Uint8Array(pdf), {

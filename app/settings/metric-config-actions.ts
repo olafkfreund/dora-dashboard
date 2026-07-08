@@ -60,23 +60,25 @@ export async function saveMetricConfigAction(_prev: ActionState, formData: FormD
     return { ok: false, message: `Invalid value at ${first.path.join(".") || "config"}: ${first.message}` }
   }
 
-  await saveMetricConfig(partial, admin.id)
-  await writeAudit(admin.id, "metric_config.update", "default", {
+  const team = String(formData.get("team") ?? "") || undefined
+  await saveMetricConfig(partial, admin.id, team)
+  await writeAudit(admin.id, "metric_config.update", team ? `team:${team}` : "default", {
     environments: partial.deployment!.environments,
     windowWeeks: partial.windowWeeks,
     failureStatuses: partial.deployment!.failureStatuses,
   })
   revalidatePath("/settings")
   revalidatePath("/")
-  return { ok: true, message: "Metric definitions saved." }
+  return { ok: true, message: team ? `Saved definitions for team "${team}".` : "Metric definitions saved." }
 }
 
-/** Reset all metric definitions back to the built-in DORA defaults (stores an empty config). */
-export async function resetMetricConfigAction(_prev: ActionState, _formData: FormData): Promise<ActionState> {
+/** Reset metric definitions back to the built-in DORA defaults (stores an empty config). */
+export async function resetMetricConfigAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const admin = await requireAdmin()
-  await saveMetricConfig({}, admin.id)
-  await writeAudit(admin.id, "metric_config.reset", "default")
+  const team = String(formData.get("team") ?? "") || undefined
+  await saveMetricConfig({}, admin.id, team)
+  await writeAudit(admin.id, "metric_config.reset", team ? `team:${team}` : "default")
   revalidatePath("/settings")
   revalidatePath("/")
-  return { ok: true, message: "Reset to DORA defaults." }
+  return { ok: true, message: "Reset to defaults." }
 }

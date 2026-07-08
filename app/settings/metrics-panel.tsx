@@ -1,7 +1,8 @@
 "use client"
 
 import { useActionState } from "react"
-import { RotateCcw, SlidersHorizontal } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { RotateCcw, SlidersHorizontal, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field } from "@/components/ui/labeled-input"
@@ -17,25 +18,60 @@ const BAND_ROWS = [
   { id: "mttr", label: "Mean Time to Restore", unit: "hours", hint: "lower = better" },
 ] as const
 
-export function MetricsPanel({ config }: { config: MetricConfig }) {
+export function MetricsPanel({
+  config,
+  teams = [],
+  currentTeam,
+}: {
+  config: MetricConfig
+  teams?: { slug: string; name: string }[]
+  currentTeam?: string
+}) {
   const [save, saveAction, saving] = useActionState(saveMetricConfigAction, undefined)
   const [reset, resetAction, resetting] = useActionState(resetMetricConfigAction, undefined)
+  const router = useRouter()
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-muted">
-            <SlidersHorizontal className="size-4" />
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-muted">
+              <SlidersHorizontal className="size-4" />
+            </div>
+            <CardTitle className="text-base">
+              Metric definitions{" "}
+              <span className="text-xs font-normal text-muted-foreground">
+                · {currentTeam ? `team "${currentTeam}" (overrides org)` : "org default (all teams)"}
+              </span>
+            </CardTitle>
           </div>
-          <CardTitle className="text-base">
-            Metric definitions{" "}
-            <span className="text-xs font-normal text-muted-foreground">· applies to all teams</span>
-          </CardTitle>
+          {teams.length > 0 && (
+            <label className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-2.5 py-1.5 text-xs">
+              <Users className="size-3.5 text-muted-foreground" />
+              <select
+                aria-label="Configure metrics for team"
+                value={currentTeam ?? "org"}
+                onChange={(e) => {
+                  const v = e.target.value
+                  router.push(v === "org" ? "/settings" : `/settings?metricsTeam=${encodeURIComponent(v)}`)
+                }}
+                className="bg-transparent text-xs font-medium outline-none"
+              >
+                <option value="org">Org default</option>
+                {teams.map((t) => (
+                  <option key={t.slug} value={t.slug}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
         <form action={saveAction} className="space-y-6">
+          <input type="hidden" name="team" value={currentTeam ?? ""} />
           {/* What counts as a deployment / change failure */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold">What counts as a deployment</h3>
@@ -108,6 +144,7 @@ export function MetricsPanel({ config }: { config: MetricConfig }) {
         </form>
 
         <form action={resetAction} className="flex items-center gap-3 border-t border-border pt-4">
+          <input type="hidden" name="team" value={currentTeam ?? ""} />
           <Button type="submit" size="sm" variant="outline" disabled={resetting}>
             <RotateCcw className={resetting ? "size-4 animate-spin" : "size-4"} />
             {resetting ? "Resetting…" : "Reset to DORA defaults"}

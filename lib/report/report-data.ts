@@ -7,6 +7,7 @@ import { getMetricConfig } from "@/lib/metrics/config-store"
 import { classifyTier, type Tier } from "@/lib/metrics/dora-tier"
 import { metrics as baseMetrics } from "@/lib/metrics/catalog"
 import type { MetricBreakdown } from "@/lib/metrics/breakdown"
+import type { TeamFilter } from "@/lib/teams/types"
 
 type Computed = { value: string; sub: string; history: number[]; trend?: string; note?: string; breakdown?: MetricBreakdown }
 
@@ -38,17 +39,18 @@ export interface ReportData {
   windowWeeks: number
   liveCount: number
   totalCount: number
+  teamName?: string
   metrics: ReportMetric[]
   attention: Attention[]
 }
 
-/** Assemble the full delivery report (same computed data the dashboard shows). */
-export async function buildReport(now = new Date()): Promise<ReportData> {
+/** Assemble the full delivery report (same computed data the dashboard shows). Optional team filter. */
+export async function buildReport(now = new Date(), filter?: TeamFilter | null): Promise<ReportData> {
   const overrides: Record<string, Computed> = {}
-  const config = await getMetricConfig()
+  const config = await getMetricConfig(filter?.slug)
 
   try {
-    const dora = await computeDora(now)
+    const dora = await computeDora(now, filter)
     if (dora.hasData) {
       const bd = dora.statusBreakdown
       const breakdown =
@@ -66,7 +68,7 @@ export async function buildReport(now = new Date()): Promise<ReportData> {
     }
   } catch {}
   try {
-    const { flow, velocity, quality, allocation } = await computeJiraMetrics(now)
+    const { flow, velocity, quality, allocation } = await computeJiraMetrics(now, filter)
     if (flow.cycleTime) overrides["cycle-time"] = flow.cycleTime
     if (flow.workItemAge) overrides["work-item-age"] = flow.workItemAge
     if (flow.blockedTime) overrides["blocked-time"] = flow.blockedTime
@@ -77,11 +79,11 @@ export async function buildReport(now = new Date()): Promise<ReportData> {
     if (allocation.investmentAllocation) overrides["investment-allocation"] = allocation.investmentAllocation
   } catch {}
   try {
-    const coverage = await computeCoverageMetric()
+    const coverage = await computeCoverageMetric(filter)
     if (coverage.testAutomationCoverage) overrides["test-automation-coverage"] = coverage.testAutomationCoverage
   } catch {}
   try {
-    const pr = await computePrCycleMetric()
+    const pr = await computePrCycleMetric(now, filter)
     if (pr.prCycleTime) overrides["pr-cycle-time"] = pr.prCycleTime
   } catch {}
 
@@ -120,6 +122,7 @@ export async function buildReport(now = new Date()): Promise<ReportData> {
     windowWeeks: config.windowWeeks,
     liveCount: metrics.filter((m) => m.live).length,
     totalCount: metrics.length,
+    teamName: filter?.name,
     metrics,
     attention,
   }

@@ -5,9 +5,11 @@ import { integrations, ssoProviders } from "@/db/schema"
 import { AppHeader } from "@/components/app-header"
 import { features } from "@/lib/features"
 import { getMetricConfig } from "@/lib/metrics/config-store"
+import { listTeams, distinctAssignables } from "@/lib/teams/store"
 import { IntegrationsPanel, type IntegrationView } from "./integrations-panel"
 import { SsoPanel, type SsoView } from "./sso-panel"
 import { MetricsPanel } from "./metrics-panel"
+import { TeamsPanel } from "./teams-panel"
 
 export const metadata = { title: "Settings · DORA Dashboard" }
 
@@ -39,12 +41,16 @@ function toSsoView(
   }
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ metricsTeam?: string }> }) {
   const admin = await requireAdmin()
-  const [intRows, ssoRows, metricCfg, h] = await Promise.all([
+  const sp = await searchParams
+  const metricsTeam = typeof sp.metricsTeam === "string" ? sp.metricsTeam : undefined
+  const [intRows, ssoRows, metricCfg, teamList, assignables, h] = await Promise.all([
     db.select().from(integrations),
     db.select().from(ssoProviders),
-    getMetricConfig(),
+    getMetricConfig(metricsTeam),
+    listTeams(),
+    distinctAssignables(),
     headers(),
   ])
   const gitlabRow = intRows.find((r) => r.provider === "GITLAB")
@@ -94,9 +100,16 @@ export default async function SettingsPage() {
 
         <section>
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Teams
+          </h2>
+          <TeamsPanel teams={teamList} available={assignables} />
+        </section>
+
+        <section>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Metrics
           </h2>
-          <MetricsPanel config={metricCfg} />
+          <MetricsPanel config={metricCfg} teams={teamList} currentTeam={metricsTeam} />
         </section>
       </main>
     </div>

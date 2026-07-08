@@ -1,20 +1,23 @@
 import { auth } from "@/auth"
 import { buildReport } from "@/lib/report/report-data"
+import { resolveTeamFilter } from "@/lib/teams/store"
 
 export const runtime = "nodejs"
 
 // CSV delivery report — all metrics + their drill-down breakdowns.
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth()
   if (!session?.user?.id) {
     return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
   }
 
-  const report = await buildReport()
+  const filter = await resolveTeamFilter(new URL(req.url).searchParams.get("team"))
+  const report = await buildReport(new Date(), filter)
   const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`
   const lines: string[] = []
 
   lines.push(`"DORA Dashboard — delivery report"`)
+  lines.push(`"Team","${report.teamName ?? "All teams"}"`)
   lines.push(`"Generated","${report.generatedAt.toISOString()}"`)
   lines.push(`"Rolling window","${report.windowWeeks} weeks"`)
   lines.push(`"Live metrics","${report.liveCount}/${report.totalCount}"`)

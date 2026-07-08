@@ -119,6 +119,16 @@ export const metricConfig = pgTable("metric_config", {
   updatedById: text("updatedById"),
 })
 
+// --- Teams (squads). A team = a set of GitLab projects + Jira project keys. Audited. ---
+export const teams = pgTable("team", {
+  slug: text("slug").primaryKey(),
+  name: text("name").notNull(),
+  // { gitlabProjects: string[] (projectPath), jiraProjectKeys: string[] }
+  config: jsonb("config").notNull().default({}),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  updatedById: text("updatedById"),
+})
+
 // --- Ingested delivery data (GitLab). Raw events for DORA computation. ---
 export const gitlabDeployments = pgTable("gitlab_deployment", {
   // `${projectId}:${deploymentId}`

@@ -7,15 +7,21 @@ import { computeJiraMetrics } from "@/lib/metrics/jira-metrics"
 import { computeCoverageMetric } from "@/lib/metrics/coverage"
 import { computePrCycleMetric } from "@/lib/metrics/pr-cycle"
 import { getMetricConfig } from "@/lib/metrics/config-store"
+import { resolveTeamFilter, listTeams } from "@/lib/teams/store"
+import { TeamSelector } from "@/components/team-selector"
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ team?: string }> }) {
   const user = await requireUser()
+  const sp = await searchParams
+  const teamSlug = typeof sp.team === "string" ? sp.team : undefined
+  const [teamFilter, teams] = await Promise.all([resolveTeamFilter(teamSlug), listTeams()])
+  const now = new Date()
 
   // Real metrics from ingested data (fall back to sample where none exists).
   const overrides: Record<string, MetricOverride> = {}
   // DORA-4 from GitLab deployments.
   try {
-    const dora = await computeDora()
+    const dora = await computeDora(now, teamFilter)
     if (dora.hasData) {
       // Shared deployment-status breakdown (window vs all-time) for the detail modal.
       const bd = dora.statusBreakdown
@@ -46,7 +52,7 @@ export default async function Home() {
   }
   // Flow + Velocity + Quality from Jira.
   try {
-    const { flow, velocity, quality, allocation } = await computeJiraMetrics()
+    const { flow, velocity, quality, allocation } = await computeJiraMetrics(now, teamFilter)
     if (flow.cycleTime) overrides["cycle-time"] = flow.cycleTime
     if (flow.workItemAge) overrides["work-item-age"] = flow.workItemAge
     if (flow.blockedTime) overrides["blocked-time"] = flow.blockedTime
@@ -60,20 +66,20 @@ export default async function Home() {
   }
   // Test Automation Coverage from GitLab CI.
   try {
-    const coverage = await computeCoverageMetric()
+    const coverage = await computeCoverageMetric(teamFilter)
     if (coverage.testAutomationCoverage) overrides["test-automation-coverage"] = coverage.testAutomationCoverage
   } catch {
     // no coverage ingested — keep sample
   }
   // PR cycle-time breakdown from GitLab merge requests.
   try {
-    const pr = await computePrCycleMetric()
+    const pr = await computePrCycleMetric(now, teamFilter)
     if (pr.prCycleTime) overrides["pr-cycle-time"] = pr.prCycleTime
   } catch {
     // MR data not ready — keep sample
   }
   const live = Object.keys(overrides).length > 0
-  const metricConfig = await getMetricConfig()
+  const metricConfig = await getMetricConfig(teamSlug)
 
   return (
     <div className="min-h-screen">
@@ -84,23 +90,25 @@ export default async function Home() {
           <div className="flex flex-col gap-2">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-xs text-muted-foreground">
               <span className="size-2 rounded-full bg-[color:var(--success)]" />
+              {teamFilter ? `Team: ${teamFilter.name} · ` : ""}
               {live
-                ? "Live · DORA-4 from GitLab deployments · other metrics are sample"
-                : "Preview build · sample data · connect GitLab in Settings for live DORA-4"}
+                ? "Live · GitLab + Jira"
+                : "Preview build · sample data · connect GitLab in Settings"}
             </div>
             <h2 className="text-2xl font-semibold tracking-tight">
               Delivery performance overview
             </h2>
           </div>
           <div className="flex items-center gap-2">
+            {teams.length > 0 && <TeamSelector teams={teams} current={teamSlug} />}
             <a
-              href="/api/report/pdf"
+              href={`/api/report/pdf${teamSlug ? `?team=${encodeURIComponent(teamSlug)}` : ""}`}
               className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
             >
               <FileDown className="size-4" /> Export PDF
             </a>
             <a
-              href="/api/report/csv"
+              href={`/api/report/csv${teamSlug ? `?team=${encodeURIComponent(teamSlug)}` : ""}`}
               className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-muted"
             >
               <Sheet className="size-4" /> Export CSV

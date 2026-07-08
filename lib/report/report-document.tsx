@@ -139,7 +139,7 @@ function ReportDocument({ data }: { data: ReportData }) {
         createElement(
           Text,
           { style: s.bandSub },
-          `Generated ${data.generatedAt.toISOString().replace("T", " ").slice(0, 16)} UTC  ·  rolling window ${data.windowWeeks} weeks`
+          `Team: ${data.teamName ?? "All teams"}  ·  generated ${data.generatedAt.toISOString().replace("T", " ").slice(0, 16)} UTC  ·  window ${data.windowWeeks}w`
         ),
         createElement(
           View,

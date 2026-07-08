@@ -282,6 +282,21 @@ definition takes effect on the next page load with <strong>no re-sync required</
 <strong>Reset to DORA defaults</strong> to clear all overrides. Only <strong>Admins</strong> can
 change these settings.</p>
 
+## Teams &amp; per-team metrics
+
+Slice the whole dashboard by squad. Under <strong>Settings → Teams</strong> an admin creates a
+team and assigns the GitLab projects and Jira project keys that belong to it. A
+<strong>team selector</strong> then appears on the dashboard — pick a team and every metric,
+breakdown and the exported report recompute for just that team's work. <em>All teams</em> (the
+default) reproduces the org-wide numbers.
+
+<div class="note">
+<strong>Per-team targets &amp; bands.</strong> In <strong>Settings → Metrics</strong>, switch the
+team selector to a squad to give it its own targets, benchmark bands, deployment definition and
+rolling window — layered over the org default. Filtering is compute-time, so assigning projects to
+a team needs <strong>no re-sync</strong>. Everything stays at team/org level — never individuals.
+</div>
+
 <p><a href="{{ '/architecture/' | relative_url }}">→ See how the data flows from GitLab/Jira into these metrics</a></p>
 
 </article>
