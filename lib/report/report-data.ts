@@ -5,7 +5,7 @@ import { computeCoverageMetric } from "@/lib/metrics/coverage"
 import { computePrCycleMetric } from "@/lib/metrics/pr-cycle"
 import { getMetricConfig } from "@/lib/metrics/config-store"
 import { classifyTier, type Tier } from "@/lib/metrics/dora-tier"
-import { metrics as baseMetrics } from "@/components/metrics-data"
+import { metrics as baseMetrics } from "@/lib/metrics/catalog"
 import type { MetricBreakdown } from "@/lib/metrics/breakdown"
 
 type Computed = { value: string; sub: string; history: number[]; trend?: string; note?: string; breakdown?: MetricBreakdown }

@@ -1,5 +1,5 @@
 import { createElement } from "react"
-import { Document, Page, Text, View, StyleSheet, Svg, Rect, renderToBuffer } from "@react-pdf/renderer"
+import { Document, Page, Text, View, StyleSheet, Svg, Rect, Path, Circle, Line, renderToBuffer } from "@react-pdf/renderer"
 import type { ReportData, ReportMetric, Attention } from "./report-data"
 
 const C = {
@@ -21,6 +21,8 @@ const sevColor = (s: Attention["severity"]) => (s === "high" ? C.low : s === "me
 const s = StyleSheet.create({
   page: { paddingTop: 34, paddingBottom: 46, paddingHorizontal: 34, fontSize: 9, color: C.ink, fontFamily: "Helvetica" },
   band: { backgroundColor: C.primary, borderRadius: 6, padding: 14, marginBottom: 14 },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  eyebrow: { color: "#c7d2fe", fontSize: 7, letterSpacing: 1.5, fontFamily: "Helvetica-Bold", marginBottom: 1 },
   h1: { color: C.white, fontSize: 18, fontFamily: "Helvetica-Bold" },
   bandSub: { color: "#e0e7ff", fontSize: 9, marginTop: 3 },
   statRow: { flexDirection: "row", gap: 8, marginTop: 10 },
@@ -49,26 +51,15 @@ const s = StyleSheet.create({
   footer: { position: "absolute", bottom: 20, left: 34, right: 34, flexDirection: "row", justifyContent: "space-between", color: C.muted, fontSize: 7, borderTopWidth: 1, borderTopColor: C.border, paddingTop: 5 },
 })
 
-function MiniBars({ history, color }: { history: number[]; color: string }) {
-  const vals = history.filter((h) => typeof h === "number")
-  if (vals.length < 2) return null
-  const max = Math.max(...vals, 1)
-  const w = 90
-  const h = 20
-  const bw = w / vals.length
+/** Brand mark: a white rounded square with a gauge glyph (matches the app's Gauge logo). */
+function LogoMark() {
   return createElement(
     Svg,
-    { width: w, height: h },
-    ...vals.map((v, i) =>
-      createElement(Rect, {
-        key: i,
-        x: i * bw + 1,
-        y: h - Math.max(1, (v / max) * h),
-        width: bw - 2,
-        height: Math.max(1, (v / max) * h),
-        fill: color,
-      })
-    )
+    { width: 30, height: 30 },
+    createElement(Rect, { x: 0, y: 0, width: 30, height: 30, rx: 7, fill: C.white }),
+    createElement(Path, { d: "M7 20 A 8 8 0 0 1 23 20", stroke: C.primary, strokeWidth: 2.4, fill: "none" }),
+    createElement(Line, { x1: 15, y1: 20, x2: 20, y2: 12, stroke: C.primary, strokeWidth: 2.2 }),
+    createElement(Circle, { cx: 15, cy: 20, r: 2, fill: C.primary })
   )
 }
 
@@ -134,7 +125,17 @@ function ReportDocument({ data }: { data: ReportData }) {
       createElement(
         View,
         { style: s.band },
-        createElement(Text, { style: s.h1 }, "Delivery Performance Report"),
+        createElement(
+          View,
+          { style: s.brandRow },
+          createElement(LogoMark, {}),
+          createElement(
+            View,
+            {},
+            createElement(Text, { style: s.eyebrow }, "DORA DASHBOARD"),
+            createElement(Text, { style: s.h1 }, "Delivery Performance Report")
+          )
+        ),
         createElement(
           Text,
           { style: s.bandSub },
