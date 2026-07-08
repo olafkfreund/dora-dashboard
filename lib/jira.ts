@@ -77,22 +77,29 @@ export interface JiraIssueRaw {
   changelog?: { histories: Array<{ created: string; items: Array<{ field: string; fromString: string | null; toString: string | null }> }> }
 }
 
-/** Paginate a JQL search, expanding the changelog. Bounded by maxIssues. */
+/**
+ * Paginate a JQL search, expanding the changelog. Bounded by maxIssues.
+ *
+ * Uses the enhanced JQL search endpoint `/rest/api/3/search/jql`. Atlassian removed
+ * the classic `/rest/api/3/search` (now returns 410 Gone). The enhanced endpoint is
+ * cursor-paginated via `nextPageToken` and does NOT return a `total`; iterate until
+ * `nextPageToken` is absent (or `isLast`).
+ */
 export async function searchIssues(cfg: JiraConfig, jql: string, fields: string, maxIssues = 2000): Promise<JiraIssueRaw[]> {
   const out: JiraIssueRaw[] = []
-  let startAt = 0
   const maxResults = 100
+  let nextPageToken: string | undefined
   while (out.length < maxIssues) {
-    const page = await jiraGet<{ issues: JiraIssueRaw[]; total: number }>(cfg, "/rest/api/3/search", {
-      jql,
-      startAt,
-      maxResults,
-      fields,
-      expand: "changelog",
-    })
+    const params: Record<string, string | number> = { jql, maxResults, fields, expand: "changelog" }
+    if (nextPageToken) params.nextPageToken = nextPageToken
+    const page = await jiraGet<{ issues: JiraIssueRaw[]; nextPageToken?: string; isLast?: boolean }>(
+      cfg,
+      "/rest/api/3/search/jql",
+      params
+    )
     out.push(...(page.issues ?? []))
-    startAt += maxResults
-    if (!page.issues?.length || startAt >= page.total) break
+    if (!page.issues?.length || page.isLast || !page.nextPageToken) break
+    nextPageToken = page.nextPageToken
   }
   return out
 }
