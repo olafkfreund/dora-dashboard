@@ -81,11 +81,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
   } catch {
     // MR data not ready — keep sample
   }
-  // Real trend history from stored snapshots (once ≥2 captures exist for this scope).
+  // Real trend history from stored snapshots — but only for metrics whose computed
+  // history is empty or flat (point-in-time metrics like coverage/blocked). Metrics
+  // that already carry a varied internal series (per-PI velocity, weekly cycle time)
+  // keep it, since a flat scalar snapshot series would look worse.
+  const varied = (a: number[] | undefined) => new Set((a ?? []).map((v) => Math.round(v * 100))).size >= 2
   try {
     const series = await getSnapshotSeries(teamSlug)
     for (const [id, hist] of series) {
-      if (overrides[id] && hist.length >= 2) overrides[id].history = hist
+      if (overrides[id] && hist.length >= 2 && !varied(overrides[id].history)) overrides[id].history = hist
     }
   } catch {
     // snapshots not ready — keep computed history
