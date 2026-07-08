@@ -40,6 +40,8 @@ export const metricConfigSchema = z.object({
   }),
   // Per-metric target values (units per metric); merged over the built-in targets.
   targets: z.record(z.string(), z.number()),
+  // Metric ids hidden from the dashboard (admin-controlled card visibility).
+  hiddenMetrics: z.array(z.string()),
 })
 
 export type MetricConfig = z.infer<typeof metricConfigSchema>
@@ -61,6 +63,7 @@ export const DEFAULT_CONFIG: MetricConfig = {
     mttr: { elite: 1, high: 24, medium: 168 }, // hours
   },
   targets: {},
+  hiddenMetrics: [],
 }
 
 // A partial config as stored in the DB (any subset of keys, any depth).
@@ -70,6 +73,7 @@ export type PartialMetricConfig = {
   mttrMode?: "proxy" | "incident"
   bands?: Partial<Record<DoraMetricId, Partial<Band>>>
   targets?: Record<string, number>
+  hiddenMetrics?: string[]
 }
 
 /** Depth-aware merge of a partial config over DEFAULT_CONFIG (missing keys fall back). */
@@ -84,6 +88,7 @@ export function mergeConfig(p: PartialMetricConfig): MetricConfig {
     mttrMode: p.mttrMode ?? DEFAULT_CONFIG.mttrMode,
     bands,
     targets: { ...DEFAULT_CONFIG.targets, ...(p.targets ?? {}) },
+    hiddenMetrics: p.hiddenMetrics ?? DEFAULT_CONFIG.hiddenMetrics,
   }
 }
 

@@ -323,16 +323,17 @@ export function MetricExplorer({
   const [openId, setOpenId] = React.useState<string | null>(null)
 
   // Apply live overrides (real GitLab-computed metrics) onto the sample set.
-  const items = React.useMemo<Metric[]>(
-    () =>
-      metrics.map((m) => {
+  const items = React.useMemo<Metric[]>(() => {
+    const hidden = new Set(config?.hiddenMetrics ?? [])
+    return metrics
+      .filter((m) => !hidden.has(m.id))
+      .map((m) => {
         const o = overrides?.[m.id]
         return o
           ? { ...m, value: o.value, sub: o.sub, history: o.history, trend: o.trend ?? m.trend, breakdown: o.breakdown, note: o.note, sourceLink: o.sourceLink }
           : m
-      }),
-    [overrides]
-  )
+      })
+  }, [overrides, config])
   const liveIds = React.useMemo(() => new Set(Object.keys(overrides ?? {})), [overrides])
   const active = items.find((m) => m.id === openId) ?? null
 

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field } from "@/components/ui/labeled-input"
 import { FormMessage } from "@/components/ui/form-message"
 import type { MetricConfig } from "@/lib/metrics/config"
+import { metrics as allCards, groups } from "@/lib/metrics/catalog"
 import { saveMetricConfigAction, resetMetricConfigAction } from "./metric-config-actions"
 
 // Local band metadata (labels/units) — avoids importing the zod-backed config module client-side.
@@ -151,6 +152,35 @@ export function MetricsPanel({
                 )
               })}
             </div>
+          </div>
+
+          {/* Card visibility */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold">Visible cards</h3>
+            <p className="text-xs text-muted-foreground">
+              Untick a metric to hide its card from the dashboard{currentTeam ? ` for team "${currentTeam}"` : ""}.
+            </p>
+            {groups.map((g) => (
+              <div key={g}>
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{g}</p>
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                  {allCards
+                    .filter((m) => m.group === g)
+                    .map((m) => (
+                      <label key={m.id} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          name="visibleCards"
+                          value={m.id}
+                          defaultChecked={!config.hiddenMetrics.includes(m.id)}
+                          className="size-3.5"
+                        />
+                        {m.label}
+                      </label>
+                    ))}
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="flex items-center gap-3">

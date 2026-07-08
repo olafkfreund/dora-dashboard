@@ -68,7 +68,8 @@ export async function buildReport(now = new Date(), filter?: TeamFilter | null):
     }
   } catch {}
   try {
-    const { flow, velocity, quality, allocation } = await computeJiraMetrics(now, filter)
+    const { flow, velocity, quality, allocation, feature } = await computeJiraMetrics(now, filter)
+    if (feature.featureCycleTime) overrides["feature-cycle-time"] = feature.featureCycleTime
     if (flow.cycleTime) overrides["cycle-time"] = flow.cycleTime
     if (flow.workItemAge) overrides["work-item-age"] = flow.workItemAge
     if (flow.blockedTime) overrides["blocked-time"] = flow.blockedTime

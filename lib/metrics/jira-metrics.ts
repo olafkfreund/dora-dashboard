@@ -2,7 +2,7 @@ import "server-only"
 import { inArray } from "drizzle-orm"
 import { db } from "@/db"
 import { jiraIssues, jiraSprints, jiraTransitions } from "@/db/schema"
-import { computeFlow, computeVelocity, type FlowResult, type VelocityResult } from "./flow-compute"
+import { computeFlow, computeVelocity, computeFeatureCycle, type FlowResult, type VelocityResult, type FeatureCycleResult } from "./flow-compute"
 import { computeQuality, type QualityResult } from "./quality-compute"
 import { computeAllocation, type AllocResult } from "./allocation-compute"
 import type { TeamFilter } from "@/lib/teams/types"
@@ -11,21 +11,24 @@ import type { TeamFilter } from "@/lib/teams/types"
 export async function computeJiraMetrics(
   now = new Date(),
   filter?: TeamFilter | null
-): Promise<{ flow: FlowResult; velocity: VelocityResult; quality: QualityResult; allocation: AllocResult }> {
+): Promise<{ flow: FlowResult; velocity: VelocityResult; quality: QualityResult; allocation: AllocResult; feature: FeatureCycleResult }> {
   const jiraKeys = filter?.jiraProjectKeys
   // A team with no Jira keys has no Jira-derived metrics.
   if (filter && (!jiraKeys || jiraKeys.length === 0)) {
-    return { flow: { hasData: false }, velocity: { hasData: false }, quality: { hasData: false }, allocation: { hasData: false } }
+    return { flow: { hasData: false }, velocity: { hasData: false }, quality: { hasData: false }, allocation: { hasData: false }, feature: { hasData: false } }
   }
   const teamIssueWhere = jiraKeys ? inArray(jiraIssues.projectKey, jiraKeys) : undefined
   const [issues, allSprints, allTransitions] = await Promise.all([
     db
       .select({
+        key: jiraIssues.id,
+        summary: jiraIssues.summary,
         issueType: jiraIssues.issueType,
         labels: jiraIssues.labels,
         statusCategory: jiraIssues.statusCategory,
         storyPoints: jiraIssues.storyPoints,
         sprintId: jiraIssues.sprintId,
+        programIncrement: jiraIssues.programIncrement,
         createdAt: jiraIssues.createdAt,
         inProgressAt: jiraIssues.inProgressAt,
         resolvedAt: jiraIssues.resolvedAt,
@@ -70,5 +73,6 @@ export async function computeJiraMetrics(
     velocity: computeVelocity(sprints, issues),
     quality: computeQuality(qualityRows),
     allocation: computeAllocation(allocRows),
+    feature: computeFeatureCycle(issues),
   }
 }

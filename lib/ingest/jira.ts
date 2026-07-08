@@ -74,9 +74,28 @@ function sprintIdFromField(value: unknown): number | null {
 async function syncIssues(cfg: JiraConfig, fieldIds: JiraFieldIds): Promise<number> {
   const scope = cfg.projectKeys?.length ? `project in (${cfg.projectKeys.join(",")}) AND ` : ""
   const jql = `${scope}updated >= -${cfg.windowDays}d ORDER BY updated DESC`
-  const fields = ["status", "issuetype", "created", "updated", "resolutiondate", "labels", fieldIds.storyPoints, fieldIds.sprint]
+  const fields = [
+    "summary", "status", "issuetype", "created", "updated", "resolutiondate", "labels", "parent",
+    fieldIds.storyPoints, fieldIds.storyPointsAlt, fieldIds.sprint, fieldIds.programIncrement,
+  ]
     .filter(Boolean)
     .join(",")
+
+  // Coalesce the two story-point fields (classic "Story Points" preferred).
+  const storyPointsOf = (f: Record<string, unknown>): number | null => {
+    const primary = fieldIds.storyPoints ? Number(f[fieldIds.storyPoints]) : NaN
+    if (Number.isFinite(primary)) return primary
+    const alt = fieldIds.storyPointsAlt ? Number(f[fieldIds.storyPointsAlt]) : NaN
+    return Number.isFinite(alt) ? alt : null
+  }
+  // Program Increment field is an array like ["PI5"] (or objects with value/name).
+  const piOf = (f: Record<string, unknown>): string | null => {
+    const v = fieldIds.programIncrement ? f[fieldIds.programIncrement] : null
+    const first = Array.isArray(v) ? v[0] : v
+    if (typeof first === "string") return first
+    if (first && typeof first === "object") return String((first as { value?: string; name?: string }).value ?? (first as { name?: string }).name ?? "") || null
+    return null
+  }
 
   const issues = await searchIssues(cfg, jql, fields)
   for (const issue of issues) {
@@ -84,17 +103,24 @@ async function syncIssues(cfg: JiraConfig, fieldIds: JiraFieldIds): Promise<numb
     const status = (f.status as { name?: string; statusCategory?: { name?: string } }) ?? {}
     const createdAt = toDate(f.created)
     const { transitions, inProgressAt, blockedSeconds } = deriveFromChangelog(issue, createdAt)
+    const summary = (f.summary as string) ?? null
+    const programIncrement = piOf(f)
+    const parentKey = (f.parent as { key?: string })?.key ?? null
+    const storyPoints = storyPointsOf(f)
 
     await db
       .insert(jiraIssues)
       .values({
         id: issue.key,
         projectKey: issue.key.split("-")[0],
+        summary,
         issueType: (f.issuetype as { name?: string })?.name ?? null,
         status: status.name ?? null,
         statusCategory: status.statusCategory?.name ?? null,
-        storyPoints: fieldIds.storyPoints ? (Number(f[fieldIds.storyPoints]) || null) : null,
+        storyPoints,
         sprintId: fieldIds.sprint ? sprintIdFromField(f[fieldIds.sprint]) : null,
+        programIncrement,
+        parentKey,
         createdAt,
         updatedAt: toDate(f.updated),
         inProgressAt,
@@ -105,10 +131,13 @@ async function syncIssues(cfg: JiraConfig, fieldIds: JiraFieldIds): Promise<numb
       .onConflictDoUpdate({
         target: jiraIssues.id,
         set: {
+          summary,
           status: status.name ?? null,
           statusCategory: status.statusCategory?.name ?? null,
-          storyPoints: fieldIds.storyPoints ? (Number(f[fieldIds.storyPoints]) || null) : null,
+          storyPoints,
           sprintId: fieldIds.sprint ? sprintIdFromField(f[fieldIds.sprint]) : null,
+          programIncrement,
+          parentKey,
           updatedAt: toDate(f.updated),
           inProgressAt,
           resolvedAt: toDate(f.resolutiondate),

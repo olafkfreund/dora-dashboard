@@ -10,6 +10,7 @@ import {
   metricConfigSchema,
   type PartialMetricConfig,
 } from "@/lib/metrics/config"
+import { metrics as allMetrics } from "@/lib/metrics/catalog"
 import type { ActionState } from "@/lib/action-state"
 
 const csv = (fd: FormData, name: string): string[] =>
@@ -52,6 +53,11 @@ export async function saveMetricConfigAction(_prev: ActionState, formData: FormD
     windowWeeks: Number(formData.get("windowWeeks")),
     mttrMode: String(formData.get("mttrMode")) === "incident" ? "incident" : "proxy",
     bands,
+    // Card visibility: any metric not ticked "visible" is hidden.
+    hiddenMetrics: (() => {
+      const visible = new Set(formData.getAll("visibleCards").map(String))
+      return allMetrics.map((m) => m.id).filter((id) => !visible.has(id))
+    })(),
   }
 
   // Validate the fully-merged config (catches NaN band values, out-of-range window, etc.).

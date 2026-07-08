@@ -53,18 +53,22 @@ async function jiraGet<T = unknown>(cfg: JiraConfig, path: string, params: Recor
 
 export interface JiraFieldIds {
   storyPoints?: string
+  storyPointsAlt?: string
   sprint?: string
+  programIncrement?: string
 }
 
-/** Auto-detect the custom-field ids for Story Points and Sprint (they vary per instance). */
+/** Auto-detect the custom-field ids (they vary per instance). Prefers the classic "Story Points". */
 export async function detectFieldIds(cfg: JiraConfig): Promise<JiraFieldIds> {
   try {
     const fields = await jiraGet<Array<{ id: string; name: string }>>(cfg, "/rest/api/3/field")
-    const find = (names: string[]) =>
-      fields.find((f) => names.includes(f.name.toLowerCase()))?.id
+    const byName = (name: string) => fields.find((f) => f.name.toLowerCase() === name)?.id
     return {
-      storyPoints: find(["story points", "story point estimate"]),
-      sprint: find(["sprint"]),
+      // Prefer the classic "Story Points" field; keep "Story point estimate" as a fallback to coalesce.
+      storyPoints: byName("story points") ?? byName("story point estimate"),
+      storyPointsAlt: byName("story point estimate"),
+      sprint: byName("sprint"),
+      programIncrement: byName("program increment"),
     }
   } catch {
     return {}

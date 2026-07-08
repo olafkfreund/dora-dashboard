@@ -20,6 +20,11 @@ export interface FlowIssueRow {
   inProgressAt: Date | null
   resolvedAt: Date | null
   blockedSeconds: number | null
+  // For Program-Increment velocity + Feature cycle time.
+  key?: string | null
+  summary?: string | null
+  issueType?: string | null
+  programIncrement?: string | null
 }
 
 export interface SprintRow {
@@ -212,8 +217,66 @@ export function computeFlow(issues: FlowIssueRow[], now = new Date(), transition
   return result
 }
 
-/** Average Velocity + Delivery Predictability from closed sprints. */
+const piNum = (pi: string) => {
+  const m = pi.match(/(\d+)/)
+  return m ? Number(m[1]) : 0
+}
+
+/** Velocity + Delivery Predictability grouped by SAFe Program Increment (P1–P6). */
+function velocityByPi(issues: FlowIssueRow[], pis: string[], windowSize: number): VelocityResult {
+  const perPi = pis
+    .map((pi) => {
+      const inPi = issues.filter((i) => i.programIncrement === pi)
+      const committed = inPi.reduce((a, i) => a + (i.storyPoints ?? 0), 0)
+      const completed = inPi.filter((i) => isDone(i.statusCategory)).reduce((a, i) => a + (i.storyPoints ?? 0), 0)
+      return { pi, committed, completed }
+    })
+    // Only real PIs that carry points — drops stray values (PI50, PI99, "test", …).
+    .filter((p) => p.committed > 0)
+    .sort((a, b) => piNum(a.pi) - piNum(b.pi))
+    .slice(-Math.max(windowSize, 6))
+  if (!perPi.length) return { hasData: false }
+  const completedArr = perPi.map((p) => p.completed)
+  const predict = perPi.filter((p) => p.committed > 0).map((p) => Math.round((p.completed / p.committed) * 1000) / 10)
+  const result: VelocityResult = { hasData: true }
+  result.averageVelocity = {
+    value: `${Math.round(mean(completedArr))} pts`,
+    sub: `avg · ${perPi.length} PIs`,
+    history: completedArr.map((v) => Math.round(v)),
+    trend: trendOf(completedArr),
+    note: "Velocity by Program Increment (P1–P6) — the team plans in PIs, not sprints.",
+    breakdown: {
+      title: "Completed points per Program Increment",
+      columns: ["PI", "Completed"],
+      rows: perPi.map((p) => ({ label: p.pi, values: [Math.round(p.completed)] })),
+    },
+  }
+  result.deliveryPredictability = predict.length
+    ? {
+        value: `${Math.round(mean(predict))}%`,
+        sub: `committed vs completed · ${predict.length} PIs`,
+        history: predict,
+        trend: trendOf(predict),
+        breakdown: {
+          title: "Committed vs completed per Program Increment",
+          columns: ["PI", "Committed", "Completed", "%"],
+          rows: perPi.map((p) => ({
+            label: p.pi,
+            values: [Math.round(p.committed), Math.round(p.completed), p.committed > 0 ? `${Math.round((p.completed / p.committed) * 100)}%` : "—"],
+          })),
+        },
+      }
+    : { value: "—", sub: "no committed points", history: [], trend: "flat" }
+  return result
+}
+
+/** Average Velocity + Delivery Predictability. Prefers Program Increments; falls back to sprints. */
 export function computeVelocity(sprints: SprintRow[], issues: FlowIssueRow[], windowSize = 5): VelocityResult {
+  // Use PI mode only when Program Increments actually carry story points.
+  const piVals = [...new Set(issues.filter((i) => (i.storyPoints ?? 0) > 0 && i.programIncrement).map((i) => i.programIncrement as string))]
+  const piResult = piVals.length ? velocityByPi(issues, piVals, windowSize) : null
+  if (piResult && piResult.hasData) return piResult
+
   const closed = sprints
     .filter((s) => s.state === "closed" && s.completeDate)
     .sort((a, b) => a.completeDate!.getTime() - b.completeDate!.getTime())
@@ -280,4 +343,39 @@ export function computeVelocity(sprints: SprintRow[], issues: FlowIssueRow[], wi
     }
   }
   return result
+}
+
+export interface FeatureCycleResult {
+  hasData: boolean
+  featureCycleTime?: Metric
+}
+
+/** Cycle time per Feature (the parent issue): median(resolved − started) across resolved Features. */
+export function computeFeatureCycle(issues: FlowIssueRow[]): FeatureCycleResult {
+  const features = issues.filter(
+    (i) => /feature/i.test(i.issueType ?? "") && i.resolvedAt && (i.inProgressAt || i.createdAt)
+  )
+  const rows = features
+    .map((i) => {
+      const start = (i.inProgressAt ?? i.createdAt) as Date
+      const days = (i.resolvedAt!.getTime() - start.getTime()) / DAY
+      return { summary: (i.summary ?? i.key ?? "").slice(0, 48), pi: i.programIncrement ?? "—", days }
+    })
+    .filter((r) => r.days > 0)
+  if (!rows.length) return { hasData: false }
+  const top = [...rows].sort((a, b) => b.days - a.days).slice(0, 12)
+  return {
+    hasData: true,
+    featureCycleTime: {
+      value: fmtDays(median(rows.map((r) => r.days))),
+      sub: `median · ${rows.length} features`,
+      history: [],
+      trend: "flat",
+      breakdown: {
+        title: "Slowest features (start → done)",
+        columns: ["Feature", "PI", "Cycle"],
+        rows: top.map((r) => ({ label: r.summary, values: [r.pi, `${r.days.toFixed(1)}d`] })),
+      },
+    },
+  }
 }

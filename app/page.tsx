@@ -54,7 +54,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
   }
   // Flow + Velocity + Quality from Jira.
   try {
-    const { flow, velocity, quality, allocation } = await computeJiraMetrics(now, teamFilter)
+    const { flow, velocity, quality, allocation, feature } = await computeJiraMetrics(now, teamFilter)
+    if (feature.featureCycleTime) overrides["feature-cycle-time"] = feature.featureCycleTime
     if (flow.cycleTime) overrides["cycle-time"] = flow.cycleTime
     if (flow.workItemAge) overrides["work-item-age"] = flow.workItemAge
     if (flow.blockedTime) overrides["blocked-time"] = flow.blockedTime

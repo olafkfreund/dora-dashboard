@@ -213,11 +213,15 @@ export const jiraIssues = pgTable("jira_issue", {
   // Jira issue key, e.g. "PROJ-123"
   id: text("id").primaryKey(),
   projectKey: text("projectKey"),
-  issueType: text("issueType"), // Story | Bug | Task | Incident | ...
+  summary: text("summary"),
+  issueType: text("issueType"), // Story | Bug | Task | Feature | Incident | ...
   status: text("status"),
   statusCategory: text("statusCategory"), // "To Do" | "In Progress" | "Done"
   storyPoints: doublePrecision("storyPoints"),
   sprintId: integer("sprintId"),
+  // SAFe Program Increment (e.g. "PI5") and the parent Feature key (e.g. "DEMO-4954").
+  programIncrement: text("programIncrement"),
+  parentKey: text("parentKey"),
   createdAt: timestamp("createdAt", { mode: "date" }),
   updatedAt: timestamp("updatedAt", { mode: "date" }),
   // First transition into an "In Progress" status — for Cycle Time / Work Item Age.

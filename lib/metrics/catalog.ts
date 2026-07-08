@@ -12,6 +12,7 @@ import {
   GitMerge,
   GitPullRequest,
   Hourglass,
+  Layers,
   PieChart,
   ShieldCheck,
   Target,
@@ -340,6 +341,25 @@ const base: Omit<Metric, "accent" | "sourceDetail">[] = [
       "Review wait is typically the largest stage — reviewer SLAs or smaller MRs move it the most.",
     history: [2.2, 2.1, 2.0, 1.9, 1.8, 1.7, 1.6, 1.6],
   },
+  {
+    id: "feature-cycle-time",
+    group: "Flow",
+    label: "Feature Cycle Time",
+    value: "24 days",
+    sub: "median · per parent Feature",
+    icon: Layers,
+    trend: "down",
+    good: "down",
+    source: "Jira",
+    target: "< 1 PI",
+    unit: "days",
+    definition:
+      "How long a Feature (the parent issue) takes from work-started to done. Rolls the story-level flow up to the delivery unit stakeholders track.",
+    formula: "median(resolved − work-started) across resolved Features",
+    insight:
+      "Long-running Features usually span multiple Program Increments — the breakdown lists the slowest with their PI.",
+    history: [30, 29, 28, 27, 26, 25, 24, 24],
+  },
 ]
 
 // Where each metric's number comes from — shown in the detail modal for provenance.
@@ -358,6 +378,7 @@ const SOURCE_DETAIL: Record<string, string> = {
   "defect-root-cause": "Jira — defects labelled with an upstream root cause (requirements/design/analysis), divided by all defects.",
   "investment-allocation": "Jira — story points (unpointed issues weighted as 1) split across feature / KTLO / tech-debt / support by issue type + labels.",
   "pr-cycle-time": "GitLab — merged merge requests broken into Coding, Pickup, Review and Deploy stages (median per stage).",
+  "feature-cycle-time": "Jira — median (resolved − work-started) across resolved Features (the parent issue type), with Program Increment.",
 }
 
 export const metrics: Metric[] = base.map((m, i) => ({
