@@ -35,7 +35,7 @@ decision log.
 
 ## Status
 
-🚧 Planning / early development. See the [roadmap](.agent-os/product/roadmap.md) and the
+ Planning / early development. See the [roadmap](.agent-os/product/roadmap.md) and the
 project's GitHub epic + issues for tracked work.
 
 ## Deployment (planned)

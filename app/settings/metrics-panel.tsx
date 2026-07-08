@@ -56,11 +56,13 @@ export function MetricsPanel({
                   const v = e.target.value
                   router.push(v === "org" ? "/settings" : `/settings?metricsTeam=${encodeURIComponent(v)}`)
                 }}
-                className="bg-transparent text-xs font-medium outline-none"
+                className="bg-background text-xs font-medium text-foreground outline-none"
               >
-                <option value="org">Org default</option>
+                <option value="org" className="bg-background text-foreground">
+                  Org default
+                </option>
                 {teams.map((t) => (
-                  <option key={t.slug} value={t.slug}>
+                  <option key={t.slug} value={t.slug} className="bg-background text-foreground">
                     {t.name}
                   </option>
                 ))}

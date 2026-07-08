@@ -2,7 +2,7 @@
 import type { ReportData, ReportMetric } from "@/lib/report/report-data"
 
 const GROUPS = ["DORA-4", "Flow", "Velocity & Quality"]
-const sevIcon = (s: string) => (s === "high" ? "🔴" : s === "medium" ? "🟠" : "🔵")
+const sevLabel = (s: string) => (s === "high" ? "[HIGH]" : s === "medium" ? "[MEDIUM]" : "[INFO]")
 
 function metricLine(m: ReportMetric): string {
   return `${m.label} ${m.value}${m.tier ? ` (${m.tier})` : ""}`
@@ -22,7 +22,7 @@ export function digestText(data: ReportData): string {
   }
   if (data.attention.length) {
     lines.push(`\n*Needs attention:*`)
-    for (const a of data.attention.slice(0, 6)) lines.push(`${sevIcon(a.severity)} ${a.metric}: ${a.message}`)
+    for (const a of data.attention.slice(0, 6)) lines.push(`${sevLabel(a.severity)} ${a.metric}: ${a.message}`)
   }
   return lines.join("\n")
 }

@@ -9,6 +9,8 @@ import {
   SlidersHorizontal,
   FlaskConical,
   Sparkles,
+  Users,
+  FileDown,
 } from "lucide-react"
 import { requireUser } from "@/lib/auth-helpers"
 import { AppHeader } from "@/components/app-header"
@@ -109,7 +111,9 @@ const TOC = [
   ["sso", "3 · Azure Entra ID SSO"],
   ["coverage", "4 · Test Automation Coverage"],
   ["metrics-config", "5 · Fine-tune metric definitions"],
-  ["decisions", "6 · Two metric decisions"],
+  ["teams", "6 · Teams & filtering"],
+  ["decisions", "7 · Two metric decisions"],
+  ["reports", "8 · Reports & scheduled digest"],
   ["using", "Using the dashboard"],
   ["at-a-glance", "At a glance"],
 ] as const
@@ -326,11 +330,37 @@ export default async function HelpPage() {
             </Note>
           </Section>
 
+          {/* Teams */}
+          <Section
+            id="teams"
+            icon={Users}
+            title="6 · Teams & filtering"
+            intro={
+              <>
+                <strong>Settings → Teams</strong> (Admin). Slice the whole dashboard by squad.
+              </>
+            }
+          >
+            <Steps
+              items={[
+                <>Create a team and tick the <strong>GitLab projects</strong> and <strong>Jira project keys</strong> that belong to it (a team = those projects + keys).</>,
+                <>Back on the dashboard, use the <strong>team dropdown</strong> (next to Export) — every metric, breakdown and the exported report recompute for just that team. <strong>All teams</strong> = the org-wide numbers.</>,
+                <>Optional: in <strong>Settings → Metrics</strong>, switch the team selector to give a squad its own targets, bands, deployment rules and window (layered over the org default).</>,
+              ]}
+            />
+            <div className="mt-4">
+              <Note>
+                Filtering is compute-time, so assigning projects to a team needs <strong>no re-sync</strong>.
+                Everything stays at team/org level — never individuals.
+              </Note>
+            </div>
+          </Section>
+
           {/* Two decisions */}
           <Section
             id="decisions"
             icon={SlidersHorizontal}
-            title="6 · Two metric decisions"
+            title="7 · Two metric decisions"
             intro="Two toggles shape how a couple of metrics are measured."
           >
             <KV
@@ -339,6 +369,28 @@ export default async function HelpPage() {
                 ["MTTR", "Keep the deploy-recovery proxy (failed → next success) or record incidents in GitLab and switch to incident open→close."],
               ]}
             />
+          </Section>
+
+          {/* Reports & digest */}
+          <Section
+            id="reports"
+            icon={FileDown}
+            title="8 · Reports & scheduled digest"
+            intro="Export the full picture, or have it delivered on a schedule."
+          >
+            <KV
+              rows={[
+                ["Export PDF / CSV", <>buttons on the dashboard produce a branded <strong>delivery report</strong> — every metric with its tier, drill-down breakdowns, and an auto-generated <strong>“Needs attention”</strong> section. Honours the selected team.</>],
+                ["Scheduled digest", <><strong>Settings → Notifications</strong>: send a recurring digest by <strong>email</strong> (PDF attached) or a <strong>Teams/Slack webhook</strong>, optionally scoped to one team. Use <strong>Send test now</strong> to verify.</>],
+                ["Scheduling", <>driven by a Kubernetes CronJob — set <C>digest.enabled</C> and <C>digest.schedule</C> in the Helm chart; the app sends it when the CronJob calls <C>/api/digest/run</C> with the shared secret.</>],
+              ]}
+            />
+            <div className="mt-4">
+              <Note>
+                Nothing leaves the cluster except your configured mail/webhook target — no third-party
+                services.
+              </Note>
+            </div>
           </Section>
 
           {/* Using the dashboard */}

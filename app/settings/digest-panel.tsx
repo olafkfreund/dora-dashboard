@@ -100,11 +100,13 @@ export function DigestPanel({
                 id="teamSlug"
                 name="teamSlug"
                 defaultValue={settings.teamSlug ?? "all"}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
               >
-                <option value="all">All teams (org)</option>
+                <option value="all" className="bg-background text-foreground">
+                  All teams (org)
+                </option>
                 {teams.map((t) => (
-                  <option key={t.slug} value={t.slug}>
+                  <option key={t.slug} value={t.slug} className="bg-background text-foreground">
                     {t.name}
                   </option>
                 ))}

@@ -120,9 +120,9 @@ flowchart TB
 <table>
 <thead><tr><th>Role</th><th>Dashboard</th><th>Settings / Integrations</th><th>Users</th><th>Sync</th></tr></thead>
 <tbody>
-<tr><td><strong>Admin</strong></td><td>✔ read</td><td>✔ configure</td><td>✔ manage</td><td>✔ trigger</td></tr>
-<tr><td><strong>Lead</strong></td><td>✔ read</td><td>—</td><td>—</td><td>—</td></tr>
-<tr><td><strong>Viewer</strong></td><td>✔ read</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><strong>Admin</strong></td><td> read</td><td> configure</td><td> manage</td><td> trigger</td></tr>
+<tr><td><strong>Lead</strong></td><td> read</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><strong>Viewer</strong></td><td> read</td><td>—</td><td>—</td><td>—</td></tr>
 </tbody>
 </table>
 </div>

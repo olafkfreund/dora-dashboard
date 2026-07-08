@@ -110,8 +110,7 @@ export function MetricDialog({
           </div>
 
           {metric.note && (
-            <div className="flex gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-              <span className="mt-0.5 text-sm">💡</span>
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
               <div>
                 <p className="text-sm font-medium">Why this value</p>
                 <p className="mt-0.5 text-sm text-foreground/90">{metric.note}</p>

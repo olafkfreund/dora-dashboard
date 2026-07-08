@@ -10,7 +10,7 @@ URL:  https://{{ .Values.ingress.host }}
    Password: kubectl get secret {{ include "dora.secretName" . }} -n {{ .Release.Namespace }} \
                -o jsonpath='{.data.BOOTSTRAP_ADMIN_PASSWORD}' | base64 -d ; echo
 
-   ⚠️  Change this password after first sign-in.
+     Change this password after first sign-in.
 
 3. Check rollout:
    kubectl rollout status deploy/{{ include "dora.fullname" . }} -n {{ .Release.Namespace }}

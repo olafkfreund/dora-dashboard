@@ -22,11 +22,13 @@ export function TeamSelector({
           const v = e.target.value
           router.push(v === "all" ? "/" : `/?team=${encodeURIComponent(v)}`)
         }}
-        className="bg-transparent pr-1 text-sm font-medium outline-none"
+        className="bg-background pr-1 text-sm font-medium text-foreground outline-none"
       >
-        <option value="all">All teams</option>
+        <option value="all" className="bg-background text-foreground">
+          All teams
+        </option>
         {teams.map((t) => (
-          <option key={t.slug} value={t.slug}>
+          <option key={t.slug} value={t.slug} className="bg-background text-foreground">
             {t.name}
           </option>
         ))}
