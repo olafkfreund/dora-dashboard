@@ -3,13 +3,13 @@ layout: default
 ---
 
 <section class="hero">
-  <span class="pill"><span class="dot"></span> Preview build · sample data</span>
+  <span class="pill"><span class="dot"></span> Live · GitLab + Jira connected</span>
   <h1>Delivery intelligence for<br /><span class="accent">regulated environments</span></h1>
   <p>
     A self-hosted, Docker-based portal that unifies <strong>DORA-4</strong> and
-    Synechron's extended delivery &amp; quality metrics from <strong>GitHub</strong>
-    and <strong>Jira</strong> — behind Azure Entra ID SSO and GitHub OAuth, with no
-    third-party data egress.
+    Synechron's extended delivery &amp; quality metrics from <strong>GitLab</strong>
+    and <strong>Jira</strong> — computed from real data, behind Azure Entra ID SSO,
+    with no third-party data egress.
   </p>
   <div class="hero-cta">
     <a class="btn btn-primary" href="{{ site.repo }}">View on GitHub ↗</a>
@@ -22,6 +22,7 @@ layout: default
     <span class="badge">Entra ID SSO</span>
     <span class="badge">GitHub OAuth</span>
     <span class="badge">PostgreSQL</span>
+    <span class="badge">CSV + PDF reports</span>
   </div>
 </section>
 
@@ -66,6 +67,11 @@ layout: default
       <div class="ico">🎛️</div>
       <h3>Configurable &amp; auditable</h3>
       <p>Admins define what counts as a deployment or failure, the rolling window, and Elite/High/Medium bands — every change audited, with lineage on each metric.</p>
+    </div>
+    <div class="feature">
+      <div class="ico">📄</div>
+      <h3>Exportable reports</h3>
+      <p>One-click CSV and branded PDF delivery reports — every metric with its tier, drill-down breakdowns, and an auto-generated “needs attention” section.</p>
     </div>
   </div>
 </section>

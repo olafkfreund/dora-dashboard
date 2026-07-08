@@ -17,10 +17,25 @@ scenario</strong> so the number is easy to trust and act on.
 </p>
 
 <div class="note">
-<strong>How to read a card.</strong> A small green <em>“live”</em> badge means the value is
-computed from your connected data (GitLab). Cards without it show sample values until the
-relevant source (e.g. Jira) is connected. Every card is clickable — the detail view shows the
-definition, the exact formula, the target/benchmark, an 8-week trend, and an insight.
+<strong>Now live from GitLab <em>and</em> Jira.</strong> Both sources are connected, so every
+metric computes from your real delivery data — a small green <em>“live”</em> badge on each card
+confirms it. Every card is clickable, and the detail view now shows a lot more:
+<ul>
+<li><strong>Definition</strong> and the exact <strong>formula</strong>.</li>
+<li>A <strong>“Data source”</strong> line — precisely where the number comes from.</li>
+<li>The target/benchmark and a coloured <strong>performance tier</strong> (Elite/High/Medium/Low).</li>
+<li>An <strong>“Active rules · lineage”</strong> panel — the configured definition behind the number (window, environments, failure statuses, bands).</li>
+<li>A data-aware <strong>“Why this value”</strong> explanation — so even a <code>0%</code> or <code>—</code> tells you <em>why</em> (e.g. “no story-pointed issues in the closed sprint”).</li>
+<li>A <strong>drill-down breakdown table</strong> — deployments by status, median time-in-stage, work-item-age buckets, per-sprint velocity, defect categories, and more.</li>
+</ul>
+</div>
+
+<div class="note">
+<strong>Export a report.</strong> The dashboard has <strong>Export PDF</strong> and
+<strong>Export CSV</strong> buttons that produce a branded delivery report — every metric with its
+tier, breakdown tables, and an auto-generated <em>“Needs attention”</em> section. An in-portal
+<strong>Help &amp; Docs</strong> page walks through connecting GitLab, Jira and Entra ID SSO and
+fine-tuning the metrics.
 </div>
 
 ## Where the numbers come from
@@ -33,14 +48,14 @@ definition, the exact formula, the target/benchmark, an 8-week trend, and an ins
 <tr><td>Lead Time for Changes</td><td>GitLab deployments + commits</td><td><span class="tag-live">live</span></td></tr>
 <tr><td>Change Failure Rate</td><td>GitLab deployments</td><td><span class="tag-live">live</span></td></tr>
 <tr><td>Mean Time to Restore</td><td>GitLab deployments (recovery)</td><td><span class="tag-live">live</span></td></tr>
-<tr><td rowspan="4">Flow</td><td>Cycle Time</td><td>Jira transitions</td><td><span class="tag-jira">Jira</span></td></tr>
-<tr><td>Work Item Age</td><td>Jira (open items)</td><td><span class="tag-jira">Jira</span></td></tr>
-<tr><td>Blocked Time</td><td>Jira (blocked status)</td><td><span class="tag-jira">Jira</span></td></tr>
-<tr><td>Delivery Predictability</td><td>Jira sprints</td><td><span class="tag-jira">Jira</span></td></tr>
-<tr><td rowspan="4">Velocity &amp; Quality</td><td>Average Velocity</td><td>Jira sprints</td><td><span class="tag-jira">Jira</span></td></tr>
-<tr><td>Test Automation Coverage</td><td>GitLab CI coverage</td><td><span class="tag-jira">GitLab</span></td></tr>
-<tr><td>Defect Escape Rate</td><td>Jira defects + releases</td><td><span class="tag-jira">Jira</span></td></tr>
-<tr><td>Defect Root Cause</td><td>Jira defect categorisation</td><td><span class="tag-jira">Jira</span></td></tr>
+<tr><td rowspan="4">Flow</td><td>Cycle Time</td><td>Jira transitions</td><td><span class="tag-live">live</span></td></tr>
+<tr><td>Work Item Age</td><td>Jira (open items)</td><td><span class="tag-live">live</span></td></tr>
+<tr><td>Blocked Time</td><td>Jira (blocked status)</td><td><span class="tag-live">live</span></td></tr>
+<tr><td>Delivery Predictability</td><td>Jira sprints</td><td><span class="tag-live">live</span></td></tr>
+<tr><td rowspan="4">Velocity &amp; Quality</td><td>Average Velocity</td><td>Jira sprints</td><td><span class="tag-live">live</span></td></tr>
+<tr><td>Test Automation Coverage</td><td>GitLab CI coverage</td><td><span class="tag-live">live</span></td></tr>
+<tr><td>Defect Escape Rate</td><td>Jira defects + releases</td><td><span class="tag-live">live</span></td></tr>
+<tr><td>Defect Root Cause</td><td>Jira defect categorisation</td><td><span class="tag-live">live</span></td></tr>
 </tbody>
 </table>
 </div>
@@ -111,7 +126,7 @@ seconds, this reads near-zero. For true incident MTTR, record incidents in GitLa
 (Incident Management) and we’ll switch the source to incident open→close.</div>
 </div>
 
-## Flow metrics (from Jira)
+## Flow metrics (live from Jira)
 
 <div class="note">
 <strong>How the Jira flow &amp; velocity values are collected.</strong> The Jira ingestion
@@ -126,7 +141,7 @@ ingestor detects them by name.
 </div>
 
 <div class="metric-doc" markdown="0">
-<h3>Cycle Time <span class="tag-jira">Jira</span></h3>
+<h3>Cycle Time <span class="tag-live">live</span></h3>
 <p class="src">Source: Jira status transitions</p>
 <p><strong>What it measures.</strong> Time from when work actively <em>starts</em> on an item to
 when it is released — execution efficiency once work begins.</p>
@@ -137,7 +152,7 @@ points at a slow stage (e.g. testing hand-off).</div>
 </div>
 
 <div class="metric-doc" markdown="0">
-<h3>Work Item Age <span class="tag-jira">Jira</span></h3>
+<h3>Work Item Age <span class="tag-live">live</span></h3>
 <p class="src">Source: Jira open, in-progress items</p>
 <p><strong>What it measures.</strong> The average age of items currently in progress — a
 <em>leading</em> indicator of work at risk of stalling.</p>
@@ -148,7 +163,7 @@ misses.</div>
 </div>
 
 <div class="metric-doc" markdown="0">
-<h3>Blocked Time <span class="tag-jira">Jira</span></h3>
+<h3>Blocked Time <span class="tag-live">live</span></h3>
 <p class="src">Source: Jira blocked/waiting status</p>
 <p><strong>What it measures.</strong> The percentage of an item’s life spent blocked — dependency
 and hand-off friction.</p>
@@ -158,7 +173,7 @@ and hand-off friction.</p>
 </div>
 
 <div class="metric-doc" markdown="0">
-<h3>Delivery Predictability <span class="tag-jira">Jira</span></h3>
+<h3>Delivery Predictability <span class="tag-live">live</span></h3>
 <p class="src">Source: Jira sprint commitments</p>
 <p><strong>What it measures.</strong> How much of the sprint-committed work is actually completed
 — planning reliability.</p>
@@ -182,7 +197,7 @@ and the percentages compute automatically.
 </div>
 
 <div class="metric-doc" markdown="0">
-<h3>Average Velocity <span class="tag-jira">Jira</span></h3>
+<h3>Average Velocity <span class="tag-live">live</span></h3>
 <p class="src">Source: Jira sprints</p>
 <p><strong>What it measures.</strong> Average story points completed per sprint over the last
 3–5 sprints — used for <em>forecasting</em>, never as a target to maximise.</p>
@@ -192,7 +207,7 @@ and the percentages compute automatically.
 </div>
 
 <div class="metric-doc" markdown="0">
-<h3>Test Automation Coverage <span class="tag-jira">planned</span></h3>
+<h3>Test Automation Coverage <span class="tag-live">live</span></h3>
 <p class="src">Source: GitLab CI test reports / coverage</p>
 <p><strong>What it measures.</strong> Share of regression/integration testing that is automated —
 a leading indicator of release confidence.</p>
@@ -202,7 +217,7 @@ precedes a falling Change Failure Rate. Collected from GitLab CI coverage/test-r
 </div>
 
 <div class="metric-doc" markdown="0">
-<h3>Defect Escape Rate <span class="tag-jira">Jira</span></h3>
+<h3>Defect Escape Rate <span class="tag-live">live</span></h3>
 <p class="src">Source: Jira defects vs releases</p>
 <p><strong>What it measures.</strong> Share of defects found <em>after</em> release vs before —
 lower means issues are caught earlier.</p>
@@ -212,7 +227,7 @@ release, that is your “escape” rate; it should fall as automation coverage r
 </div>
 
 <div class="metric-doc" markdown="0">
-<h3>Defect Root Cause <span class="tag-jira">Jira</span></h3>
+<h3>Defect Root Cause <span class="tag-live">live</span></h3>
 <p class="src">Source: Jira defect categorisation</p>
 <p><strong>What it measures.</strong> Proportion of defects requiring rework due to
 <em>upstream</em> causes (requirements, design, dependencies).</p>
