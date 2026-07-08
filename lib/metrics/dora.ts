@@ -3,6 +3,7 @@ import { and, gte, isNotNull, eq, inArray, or, ilike } from "drizzle-orm"
 import { db } from "@/db"
 import { gitlabDeployments, gitlabMergeRequests, gitlabIncidents, jiraIssues, integrations } from "@/db/schema"
 import { computeDoraFromRows, computeIncidentMttr, type DoraResult } from "./dora-compute"
+import { isProdEnv } from "./quality-compute"
 import { getMetricConfig } from "./config-store"
 import type { TeamFilter } from "@/lib/teams/types"
 
@@ -65,8 +66,7 @@ export async function computeDora(now = new Date(), filter?: TeamFilter | null):
       })
       .from(jiraIssues)
       .where(and(or(ilike(jiraIssues.issueType, "%incident%"), isNotNull(jiraIssues.defectEnv)), teamJira))
-    const isProdDefect = (e: string | null) => !!e && /prod/i.test(e) && !/non.?prod|pre.?prod/i.test(e)
-    const failures = candidates.filter((r) => /incident/i.test(r.issueType ?? "") || isProdDefect(r.defectEnv))
+    const failures = candidates.filter((r) => /incident/i.test(r.issueType ?? "") || isProdEnv(r.defectEnv))
 
     if (failures.length) {
       const inWin = failures.filter((f) => f.createdAt && f.createdAt >= since)

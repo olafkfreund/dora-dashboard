@@ -11,20 +11,19 @@ export interface QualityIssueRow {
 // Buckets for the Root Cause Analysis field values.
 const RC_TRIAGE = /under review|reject|duplicate/i // not a real cause yet
 const RC_REQUIREMENTS = /requirement/i
-const RC_DESIGN = /design/i
 const RC_CODE = /code defect/i
 const RC_CHANGE = /change request|enhancement/i
 const RC_ENV = /environment|deployment|devops|access|test data/i
 const rcBucket = (rc: string): string =>
   RC_TRIAGE.test(rc) ? "Under review / Rejected"
     : RC_REQUIREMENTS.test(rc) ? "Requirements"
-      : RC_DESIGN.test(rc) ? "Design"
+      : DESIGN.test(rc) ? "Design"
         : RC_CODE.test(rc) ? "Code"
           : RC_CHANGE.test(rc) ? "Change / Enhancement"
             : RC_ENV.test(rc) ? "Environment / Ops"
               : "Other"
 // A defect's Environment Type is "escaped" when it's Production (not Pre-/Non-Prod).
-const isProdEnv = (e: string) => /prod/i.test(e) && !/non.?prod|pre.?prod/i.test(e)
+export const isProdEnv = (e: string | null) => !!e && /prod/i.test(e) && !/non.?prod|pre.?prod/i.test(e)
 
 export interface CoverageRow {
   coverage: number | null
@@ -76,7 +75,7 @@ export function computeQuality(issues: QualityIssueRow[]): QualityResult {
       counts[b] = (counts[b] ?? 0) + 1
     }
     const triaged = withRc.filter((i) => !RC_TRIAGE.test(i.rootCause as string)).length
-    const upstream = withRc.filter((i) => RC_REQUIREMENTS.test(i.rootCause as string) || RC_DESIGN.test(i.rootCause as string)).length
+    const upstream = withRc.filter((i) => RC_REQUIREMENTS.test(i.rootCause as string) || DESIGN.test(i.rootCause as string)).length
     const review = withRc.length - triaged
     const ORDER = ["Requirements", "Design", "Code", "Change / Enhancement", "Environment / Ops", "Other", "Under review / Rejected"]
     defectRootCause = {

@@ -232,13 +232,12 @@ export function computeFlow(issues: FlowIssueRow[], now = new Date(), transition
   if (everBlocked > 0 && blockedLifetimeSecs > 0) {
     const pct = Math.round((blockedSecs / blockedLifetimeSecs) * 1000) / 10
     const blockedDays = blockedSecs / 86400
-    const dilutedPct = lifetimeSecs > 0 ? Math.round((blockedSecs / lifetimeSecs) * 1000) / 10 : 0
     result.blockedTime = {
       value: `${pct}%`,
       sub: `of blocked items' lifetime`,
       history: [],
       trend: "flat",
-      note: `Across the ${everBlocked} items that were ever blocked. As a share of all work it is ${dilutedPct}%.`,
+      note: `Across the ${everBlocked} items that were ever blocked. As a share of all work it is ${lifetimeSecs ? Math.round((blockedSecs / lifetimeSecs) * 1000) / 10 : 0}%.`,
       breakdown: {
         title: "Blocked-time detail",
         columns: ["Measure", "Value"],
