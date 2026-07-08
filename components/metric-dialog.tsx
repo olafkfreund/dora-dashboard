@@ -109,9 +109,24 @@ export function MetricDialog({
             <GradientAreaChart data={metric.history} color={metric.accent} id={`dlg-${metric.id}`} height={96} />
           </div>
 
+          {metric.note && (
+            <div className="flex gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+              <span className="mt-0.5 text-sm">💡</span>
+              <div>
+                <p className="text-sm font-medium">Why this value</p>
+                <p className="mt-0.5 text-sm text-foreground/90">{metric.note}</p>
+              </div>
+            </div>
+          )}
+
           <div>
             <h3 className="mb-1 text-sm font-semibold">Definition</h3>
             <p className="text-sm text-muted-foreground">{metric.definition}</p>
+          </div>
+
+          <div>
+            <h3 className="mb-1 text-sm font-semibold">Data source</h3>
+            <p className="text-sm text-muted-foreground">{metric.sourceDetail}</p>
           </div>
 
           <div>
@@ -152,6 +167,43 @@ export function MetricDialog({
                   ) : null
                 })()}
               </dl>
+            </div>
+          )}
+
+          {metric.breakdown && metric.breakdown.rows.length > 0 && (
+            <div>
+              <h3 className="mb-1 text-sm font-semibold">{metric.breakdown.title}</h3>
+              <p className="mb-2 text-xs text-muted-foreground">
+                The underlying data behind this number.
+              </p>
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/40">
+                      {metric.breakdown.columns.map((c, i) => (
+                        <th
+                          key={c}
+                          className={`px-3 py-2 font-medium ${i === 0 ? "text-left" : "text-right"}`}
+                        >
+                          {c}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metric.breakdown.rows.map((r) => (
+                      <tr key={r.label} className="border-b border-border last:border-0">
+                        <td className="px-3 py-2 font-mono text-xs">{r.label}</td>
+                        {r.values.map((v, i) => (
+                          <td key={i} className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                            {v}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

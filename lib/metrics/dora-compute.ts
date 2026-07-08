@@ -5,6 +5,15 @@ export interface DoraMetric {
   sub: string
   history: number[]
   trend: "up" | "down" | "flat"
+  /** Optional data-aware explanation shown in the detail modal (esp. for 0/thin values). */
+  note?: string
+}
+
+/** Deployment count by status, split into the rolling window vs all ingested history. */
+export interface StatusCount {
+  status: string
+  inWindow: number
+  total: number
 }
 
 export interface DoraResult {
@@ -15,6 +24,8 @@ export interface DoraResult {
   changeFailureRate?: DoraMetric
   leadTime?: DoraMetric
   mttr?: DoraMetric
+  /** Deployment status distribution (matching the deployment definition) for drill-down. */
+  statusBreakdown?: StatusCount[]
 }
 
 export interface DeploymentRow {
@@ -224,5 +235,25 @@ export function computeDoraFromRows(rows: DeploymentRow[], now = new Date(), opt
       trend: trendOf(mttrHist),
     }
   }
+
+  // Status distribution (matching the deployment definition): window vs all history.
+  const countBy = (arr: DeploymentRow[]) => {
+    const m = new Map<string, number>()
+    for (const r of arr) {
+      const s = r.status ?? "(unknown)"
+      m.set(s, (m.get(s) ?? 0) + 1)
+    }
+    return m
+  }
+  const totalByStatus = countBy(defined)
+  const windowByStatus = countBy(inWindow)
+  result.statusBreakdown = [...new Set([...totalByStatus.keys(), ...windowByStatus.keys()])]
+    .map((status) => ({
+      status,
+      inWindow: windowByStatus.get(status) ?? 0,
+      total: totalByStatus.get(status) ?? 0,
+    }))
+    .sort((a, b) => b.total - a.total)
+
   return result
 }

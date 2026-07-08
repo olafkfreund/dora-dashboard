@@ -16,10 +16,29 @@ export default async function Home() {
   try {
     const dora = await computeDora()
     if (dora.hasData) {
-      if (dora.deploymentFrequency) overrides["deployment-frequency"] = dora.deploymentFrequency
-      if (dora.changeFailureRate) overrides["change-failure-rate"] = dora.changeFailureRate
-      if (dora.leadTime) overrides["lead-time-for-changes"] = dora.leadTime
-      if (dora.mttr) overrides["mttr"] = dora.mttr
+      // Shared deployment-status breakdown (window vs all-time) for the detail modal.
+      const bd = dora.statusBreakdown
+      const breakdown =
+        bd && bd.length
+          ? {
+              title: "Deployments by status",
+              columns: ["Status", `Last ${dora.windowWeeks}w`, "All time"],
+              rows: bd.map((s) => ({ label: s.status, values: [s.inWindow, s.total] })),
+            }
+          : undefined
+      if (dora.deploymentFrequency) overrides["deployment-frequency"] = { ...dora.deploymentFrequency, breakdown }
+      if (dora.changeFailureRate) {
+        const failed = bd?.find((s) => s.status === "failed")
+        const older = failed ? failed.total - failed.inWindow : 0
+        const cfrNote = failed
+          ? `${failed.inWindow} failed deployment(s) in the last ${dora.windowWeeks}w of ${dora.deploymentsTotal} total.` +
+            (older > 0 ? ` ${older} more failed deployment(s) are older than the window.` : "") +
+            ` Note: a GitLab "failed" deployment means the deploy job itself errored — not necessarily a production incident, so this can under-count real change failures.`
+          : `No deployments had a failure status in the last ${dora.windowWeeks}w, so the rate is 0%. Note: a GitLab "failed" deployment = the deploy job errored, not a production incident — real change failures may not appear here.`
+        overrides["change-failure-rate"] = { ...dora.changeFailureRate, breakdown, note: cfrNote }
+      }
+      if (dora.leadTime) overrides["lead-time-for-changes"] = { ...dora.leadTime, breakdown }
+      if (dora.mttr) overrides["mttr"] = { ...dora.mttr, breakdown }
     }
   } catch {
     // ingestion not ready — keep sample DORA metrics

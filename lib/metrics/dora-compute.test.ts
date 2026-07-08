@@ -128,4 +128,19 @@ describe("computeDoraFromRows — configurable definition", () => {
     const r = computeDoraFromRows(rows, NOW, { deployment: { ...DEF, refPattern: "([" } })
     expect(r.deploymentsTotal).toBe(1)
   })
+
+  it("statusBreakdown splits counts by status (window vs all-time)", () => {
+    const rows: DeploymentRow[] = [
+      { projectId: 1, status: "success", finishedAt: at(1), committedAt: null },
+      { projectId: 1, status: "success", finishedAt: at(2), committedAt: null },
+      { projectId: 1, status: "skipped", finishedAt: at(3), committedAt: null },
+      { projectId: 1, status: "failed", finishedAt: at(400), committedAt: null }, // outside 8w window
+    ]
+    const bd = computeDoraFromRows(rows, NOW).statusBreakdown!
+    const byStatus = Object.fromEntries(bd.map((s) => [s.status, s]))
+    expect(byStatus.success).toEqual({ status: "success", inWindow: 2, total: 2 })
+    expect(byStatus.skipped).toEqual({ status: "skipped", inWindow: 1, total: 1 })
+    // the failed deploy is older than the window: counted in total, not in window
+    expect(byStatus.failed).toEqual({ status: "failed", inWindow: 0, total: 1 })
+  })
 })

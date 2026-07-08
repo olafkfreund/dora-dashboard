@@ -63,4 +63,14 @@ describe("computeVelocity", () => {
     expect(r.averageVelocity?.value).toBe("9 pts") // mean(8,10)
     expect(r.deliveryPredictability?.value).toBe("90%") // mean(80%,100%)
   })
+
+  it("explains a 0 velocity when the closed sprint has no story-pointed issues", () => {
+    const sprints: SprintRow[] = [{ id: 1, state: "closed", startDate: new Date(), completeDate: new Date() }]
+    const issues: FlowIssueRow[] = [
+      { statusCategory: "In Progress", storyPoints: null, sprintId: 1, createdAt: new Date(), inProgressAt: new Date(), resolvedAt: null, blockedSeconds: 0 },
+    ]
+    const r = computeVelocity(sprints, issues)
+    expect(r.averageVelocity?.value).toBe("0 pts")
+    expect(r.averageVelocity?.note).toMatch(/no story-pointed issues/i)
+  })
 })

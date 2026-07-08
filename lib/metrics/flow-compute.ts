@@ -5,6 +5,8 @@ export interface Metric {
   sub: string
   history: number[]
   trend: "up" | "down" | "flat"
+  /** Optional data-aware explanation shown in the detail modal (esp. for 0/thin values). */
+  note?: string
 }
 
 export interface FlowIssueRow {
@@ -120,8 +122,10 @@ export function computeVelocity(sprints: SprintRow[], issues: FlowIssueRow[], wi
 
   const completedPerSprint: number[] = []
   const predictabilityPerSprint: number[] = []
+  let pointedInClosed = 0
   for (const sprint of closed) {
     const inSprint = issues.filter((i) => i.sprintId === sprint.id)
+    pointedInClosed += inSprint.filter((i) => (i.storyPoints ?? 0) > 0).length
     const committed = inSprint.reduce((a, i) => a + (i.storyPoints ?? 0), 0)
     const completed = inSprint.filter((i) => isDone(i.statusCategory)).reduce((a, i) => a + (i.storyPoints ?? 0), 0)
     completedPerSprint.push(completed)
@@ -130,11 +134,19 @@ export function computeVelocity(sprints: SprintRow[], issues: FlowIssueRow[], wi
 
   const result: VelocityResult = { hasData: true }
   const avg = mean(completedPerSprint)
+  // Explain a 0 (the common "sprints exist but issues aren't story-pointed" case).
+  const velNote =
+    avg > 0
+      ? undefined
+      : pointedInClosed === 0
+        ? `The last ${closed.length} closed sprint(s) contain no story-pointed issues, so completed velocity is 0. Add story-point estimates to Jira issues for this to reflect real throughput.`
+        : `Issues in the last ${closed.length} closed sprint(s) carry story points but none are marked Done, so completed velocity is 0.`
   result.averageVelocity = {
     value: `${Math.round(avg)} pts`,
-    sub: `avg · last ${closed.length} sprints`,
+    sub: `avg · last ${closed.length} sprint${closed.length === 1 ? "" : "s"}`,
     history: completedPerSprint.map((v) => Math.round(v)),
     trend: trendOf(completedPerSprint),
+    note: velNote,
   }
   if (predictabilityPerSprint.length) {
     result.deliveryPredictability = {
@@ -142,6 +154,14 @@ export function computeVelocity(sprints: SprintRow[], issues: FlowIssueRow[], wi
       sub: `committed vs completed`,
       history: predictabilityPerSprint,
       trend: trendOf(predictabilityPerSprint),
+    }
+  } else {
+    result.deliveryPredictability = {
+      value: "—",
+      sub: "no committed points",
+      history: [],
+      trend: "flat",
+      note: `The last ${closed.length} closed sprint(s) have no committed story points, so predictability can't be computed. It needs sprint issues with story-point estimates.`,
     }
   }
   return result

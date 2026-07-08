@@ -22,6 +22,16 @@ describe("computeQuality", () => {
     // 2 upstream (requirements, design) of 4 → 50%
     expect(r.defectRootCause?.value).toBe("50%")
   })
+
+  it("explains a 0% root cause when no defect carries a root-cause label", () => {
+    const rows = [
+      { issueType: "Bug", labels: ["QA", "BackEnd"] },
+      { issueType: "Bug", labels: ["Claims"] },
+    ]
+    const r = computeQuality(rows)
+    expect(r.defectRootCause?.value).toBe("0%")
+    expect(r.defectRootCause?.note).toMatch(/root-cause label/i)
+  })
 })
 
 describe("computeCoverage", () => {

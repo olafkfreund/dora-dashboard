@@ -50,12 +50,20 @@ export function computeQuality(issues: QualityIssueRow[]): QualityResult {
       sub: `${escaped}/${defects.length} post-release`,
       history: [],
       trend: flat,
+      note:
+        escaped === 0
+          ? `None of the ${defects.length} defects carry a post-release/production label, so the escape rate is 0. Tag escaped defects (e.g. "Prod-Incident", "post-release", "production") for this to reflect real leakage.`
+          : undefined,
     },
     defectRootCause: {
       value: `${pct(upstream)}%`,
       sub: `upstream-caused of ${defects.length}`,
       history: [],
       trend: flat,
+      note:
+        upstream === 0
+          ? `None of the ${defects.length} defects carry an upstream root-cause label (requirements/design/analysis/refinement). Tag each bug with the root-cause category so this metric can attribute defects.`
+          : undefined,
     },
   }
 }

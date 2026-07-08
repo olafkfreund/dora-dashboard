@@ -29,6 +29,13 @@ export type Source =
   | "GitLab + Jira"
   | "GitHub + Jira"
 
+/** A small drill-down table shown in the metric detail modal (e.g. deployment status counts). */
+export interface MetricBreakdown {
+  title: string
+  columns: string[]
+  rows: { label: string; values: (string | number)[] }[]
+}
+
 export interface Metric {
   id: string
   group: string
@@ -47,6 +54,12 @@ export interface Metric {
   history: number[]
   /** Vivid accent color for chart/modern views (hex). */
   accent: string
+  /** Where the number comes from (system + entities), shown in the detail modal. */
+  sourceDetail: string
+  /** Optional underlying-data breakdown for the detail modal. */
+  breakdown?: MetricBreakdown
+  /** Optional data-aware explanation (e.g. why a value is 0), shown in the detail modal. */
+  note?: string
 }
 
 // Vivid per-metric accent palette (used by the Charts and Modern views).
@@ -65,7 +78,7 @@ const ACCENTS = [
   "#8b5cf6", // violet
 ]
 
-const base: Omit<Metric, "accent">[] = [
+const base: Omit<Metric, "accent" | "sourceDetail">[] = [
   {
     id: "deployment-frequency",
     group: "DORA-4",
@@ -334,9 +347,28 @@ const base: Omit<Metric, "accent">[] = [
   },
 ]
 
+// Where each metric's number comes from — shown in the detail modal for provenance.
+const SOURCE_DETAIL: Record<string, string> = {
+  "deployment-frequency": "GitLab — count of successful production deployments, divided by the weeks in the rolling window.",
+  "lead-time-for-changes": "GitLab — median time from a change's first commit (matched via its merge request) to the production deployment that shipped it.",
+  "change-failure-rate": "GitLab — deployments whose status counts as a failure, divided by all considered deployments in the window.",
+  mttr: "GitLab — median time from a failed deployment to the next successful deployment of the same project (deploy-recovery proxy).",
+  "cycle-time": "Jira — median of (resolved − work-started) across issues completed in the window, from status-change history.",
+  "work-item-age": "Jira — mean age of currently open, in-progress issues (now − work-started), from status history.",
+  "blocked-time": "Jira — total time issues spent in a blocked/impediment status, as a share of total item lifetime.",
+  "delivery-predictability": "Jira — completed vs committed story points across the last closed sprints.",
+  "average-velocity": "Jira — mean completed story points across the last closed sprints (needs story-pointed issues).",
+  "test-automation-coverage": "GitLab CI — mean of each project's latest pipeline coverage value.",
+  "defect-escape-rate": "Jira — defects labelled post-release/production, divided by all defects.",
+  "defect-root-cause": "Jira — defects labelled with an upstream root cause (requirements/design/analysis), divided by all defects.",
+  "investment-allocation": "Jira — story points (unpointed issues weighted as 1) split across feature / KTLO / tech-debt / support by issue type + labels.",
+  "pr-cycle-time": "GitLab — merged merge requests broken into Coding, Pickup, Review and Deploy stages (median per stage).",
+}
+
 export const metrics: Metric[] = base.map((m, i) => ({
   ...m,
   accent: ACCENTS[i % ACCENTS.length],
+  sourceDetail: SOURCE_DETAIL[m.id] ?? `Source: ${m.source}`,
 }))
 
 export const groups = ["DORA-4", "Flow", "Velocity & Quality"] as const
