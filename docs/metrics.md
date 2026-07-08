@@ -26,7 +26,7 @@ confirms it. Every card is clickable, and the detail view now shows a lot more:
 <li>The target/benchmark and a coloured <strong>performance tier</strong> (Elite/High/Medium/Low).</li>
 <li>An <strong>“Active rules · lineage”</strong> panel — the configured definition behind the number (window, environments, failure statuses, bands).</li>
 <li>A data-aware <strong>“Why this value”</strong> explanation — so even a <code>0%</code> or <code>—</code> tells you <em>why</em> (e.g. “no story-pointed issues in the closed sprint”).</li>
-<li>A <strong>drill-down breakdown table</strong> — deployments by status, median time-in-stage, work-item-age buckets, per-sprint velocity, defect categories, and more.</li>
+<li>A <strong>drill-down breakdown table</strong> — deployments by status, median time-in-stage, work-item-age buckets, per-PI velocity, defect categories, and more.</li>
 </ul>
 </div>
 
@@ -70,11 +70,12 @@ cluster except your configured mail/webhook target.
 <tr><td>Lead Time for Changes</td><td>GitLab deployments + commits</td><td><span class="tag-live">live</span></td></tr>
 <tr><td>Change Failure Rate</td><td>GitLab deployments</td><td><span class="tag-live">live</span></td></tr>
 <tr><td>Mean Time to Restore</td><td>GitLab deployments (recovery)</td><td><span class="tag-live">live</span></td></tr>
-<tr><td rowspan="4">Flow</td><td>Cycle Time</td><td>Jira transitions</td><td><span class="tag-live">live</span></td></tr>
+<tr><td rowspan="5">Flow</td><td>Cycle Time</td><td>Jira transitions</td><td><span class="tag-live">live</span></td></tr>
 <tr><td>Work Item Age</td><td>Jira (open items)</td><td><span class="tag-live">live</span></td></tr>
 <tr><td>Blocked Time</td><td>Jira (blocked status)</td><td><span class="tag-live">live</span></td></tr>
-<tr><td>Delivery Predictability</td><td>Jira sprints</td><td><span class="tag-live">live</span></td></tr>
-<tr><td rowspan="4">Velocity &amp; Quality</td><td>Average Velocity</td><td>Jira sprints</td><td><span class="tag-live">live</span></td></tr>
+<tr><td>Delivery Predictability</td><td>Jira PIs (P1–P6)</td><td><span class="tag-live">live</span></td></tr>
+<tr><td>Feature Cycle Time</td><td>Jira Features (parent)</td><td><span class="tag-live">live</span></td></tr>
+<tr><td rowspan="4">Velocity &amp; Quality</td><td>Average Velocity</td><td>Jira PIs (P1–P6)</td><td><span class="tag-live">live</span></td></tr>
 <tr><td>Test Automation Coverage</td><td>GitLab CI coverage</td><td><span class="tag-live">live</span></td></tr>
 <tr><td>Defect Escape Rate</td><td>Jira defects + releases</td><td><span class="tag-live">live</span></td></tr>
 <tr><td>Defect Root Cause</td><td>Jira defect categorisation</td><td><span class="tag-live">live</span></td></tr>
@@ -152,14 +153,15 @@ seconds, this reads near-zero. For true incident MTTR, record incidents in GitLa
 
 <div class="note">
 <strong>How the Jira flow &amp; velocity values are collected.</strong> The Jira ingestion
-(<em>Settings → Jira → Sync</em>) pulls issues with their <strong>changelog</strong> and the boards'
-<strong>sprints</strong>. From each issue's changelog we derive three timing signals and store them:
+(<em>Settings → Jira → Sync</em>) pulls the <strong>full window</strong> of issues with their
+<strong>changelog</strong>. From each issue's changelog we derive three timing signals:
 <code>inProgressAt</code> (first transition out of the initial status), <code>resolvedAt</code>
-(resolution date), and <code>blockedSeconds</code> (total time spent in a Blocked/On-hold status).
-Story points and the sprint are read from the issue's custom fields (auto-detected). The metrics
-below are then computed from that stored data — they go <em>live</em> the moment a Jira token is
-connected and a sync has run. Custom Story-Points/Sprint fields vary per Jira instance, so the
-ingestor detects them by name.
+(resolution date), and <code>blockedSeconds</code> (time spent in a Blocked/On-hold status). We
+also store each issue's <strong>story points</strong> (the classic Story-Points field),
+<strong>Program Increment</strong> (P1–P6), and parent <strong>Feature</strong>. Flow and velocity
+are computed at the delivery level — <strong>Sub-tasks are excluded</strong> (they are
+implementation details under Stories and would double-count). Velocity and Predictability are
+grouped by <strong>Program Increment</strong>, since the team plans in PIs rather than sprints.
 </div>
 
 <div class="metric-doc" markdown="0">
@@ -167,7 +169,7 @@ ingestor detects them by name.
 <p class="src">Source: Jira status transitions</p>
 <p><strong>What it measures.</strong> Time from when work actively <em>starts</em> on an item to
 when it is released — execution efficiency once work begins.</p>
-<code class="formula">median(released_at − in_progress_at) for completed items</code>
+<code class="formula">median(resolved − work-started) for completed items (excludes sub-tasks)</code>
 <div class="scenario"><strong>Real-life:</strong> A story moves to <em>In Progress</em> on the
 3rd and is <em>Done/Released</em> on the 6th → 3-day cycle time. Rising cycle time usually
 points at a slow stage (e.g. testing hand-off).</div>
@@ -196,12 +198,26 @@ and hand-off friction.</p>
 
 <div class="metric-doc" markdown="0">
 <h3>Delivery Predictability <span class="tag-live">live</span></h3>
-<p class="src">Source: Jira sprint commitments</p>
-<p><strong>What it measures.</strong> How much of the sprint-committed work is actually completed
+<p class="src">Source: Jira Program Increment (P1–P6) commitments</p>
+<p><strong>What it measures.</strong> How much of the Program-Increment-committed work is actually completed
 — planning reliability.</p>
-<code class="formula">completed story points / committed story points × 100</code>
+<code class="formula">completed ÷ committed story points × 100, per Program Increment (mean across PIs)</code>
 <div class="scenario"><strong>Real-life:</strong> A team commits to 40 points and finishes 35 →
 87% predictability. Stable ~85%+ means commitments are well-calibrated to capacity.</div>
+</div>
+
+<div class="metric-doc" markdown="0">
+<h3>Feature Cycle Time <span class="tag-live">live</span></h3>
+<p class="src">Source: Jira Features (the parent issue type)</p>
+<p><strong>What it measures.</strong> How long a <strong>Feature</strong> — the delivery unit
+stakeholders track — takes from work-started to done, rolling the story-level flow up to the level
+people plan and report at.</p>
+<code class="formula">median(resolved − work-started) across resolved Features</code>
+<p>The breakdown lists the slowest Features with their Program Increment, so long-runners that
+span multiple PIs are easy to spot.</p>
+<div class="scenario"><strong>Real-life:</strong> A Feature started in PI3 and closed in PI5 has a
+long cycle time — usually a sign it should have been split into smaller, independently shippable
+slices.</div>
 </div>
 
 ## Velocity &amp; Quality
@@ -220,12 +236,11 @@ and the percentages compute automatically.
 
 <div class="metric-doc" markdown="0">
 <h3>Average Velocity <span class="tag-live">live</span></h3>
-<p class="src">Source: Jira sprints</p>
-<p><strong>What it measures.</strong> Average story points completed per sprint over the last
-3–5 sprints — used for <em>forecasting</em>, never as a target to maximise.</p>
-<code class="formula">mean(completed story points) over last 5 sprints</code>
-<div class="scenario"><strong>Real-life:</strong> A steady 42 pts/sprint lets you forecast a
-100-point epic at ~2.5 sprints. A sudden spike is a smell (scope inflation), not a win.</div>
+<p class="src">Source: Jira Program Increments (P1–P6)</p>
+<p><strong>What it measures.</strong> Average story points completed per Program Increment (P1–P6) — used for <em>forecasting</em>, never as a target to maximise.</p>
+<code class="formula">mean(completed story points) per Program Increment (P1–P6)</code>
+<div class="scenario"><strong>Real-life:</strong> A steady ~700 pts/PI (like PI3) lets you forecast
+a large epic across Program Increments. A sudden spike is a smell (scope inflation), not a win.</div>
 </div>
 
 <div class="metric-doc" markdown="0">
@@ -233,7 +248,7 @@ and the percentages compute automatically.
 <p class="src">Source: GitLab CI test reports / coverage</p>
 <p><strong>What it measures.</strong> Share of regression/integration testing that is automated —
 a leading indicator of release confidence.</p>
-<code class="formula">automated test cases / total test cases × 100</code>
+<code class="formula">mean of each project's latest GitLab CI pipeline coverage %</code>
 <div class="scenario"><strong>Real-life:</strong> Rising coverage (e.g. 76% → 80%) typically
 precedes a falling Change Failure Rate. Collected from GitLab CI coverage/test-report artifacts.</div>
 </div>

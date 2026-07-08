@@ -146,7 +146,7 @@ const base: Omit<Metric, "accent" | "sourceDetail">[] = [
     unit: "hours",
     definition:
       "How long it takes to restore service after a production incident or failed change.",
-    formula: "mean(incident_resolved_at − incident_started_at) in range",
+    formula: "median(next successful deploy − failed deploy); or incident close − open when MTTR source = incidents",
     insight:
       "Down 18 minutes vs the previous period. Faster rollback automation is the main driver.",
     history: [3.4, 3.1, 3.0, 2.8, 2.7, 2.6, 2.5, 2.3],
@@ -165,7 +165,7 @@ const base: Omit<Metric, "accent" | "sourceDetail">[] = [
     unit: "days",
     definition:
       "Time from when work actively starts on an item until it is released. Reflects execution efficiency once work begins.",
-    formula: "median(released_at − in_progress_at) for completed items",
+    formula: "median(resolved − work-started) for completed items (Stories/Tasks/Bugs — excludes sub-tasks)",
     insight:
       "Just above target. Testing hand-off is the slowest stage in the value stream.",
     history: [4.3, 4.1, 3.9, 3.7, 3.5, 3.3, 3.2, 3.1],
@@ -221,8 +221,8 @@ const base: Omit<Metric, "accent" | "sourceDetail">[] = [
     target: "≥ 85%",
     unit: "%",
     definition:
-      "How much of the sprint-committed work is actually completed. Measures planning reliability.",
-    formula: "completed story points / committed story points × 100",
+      "How much of the Program-Increment-committed work is actually completed. Measures planning reliability.",
+    formula: "completed ÷ committed story points × 100, per Program Increment (mean across PIs)",
     insight:
       "Above target and stable — commitments are well-calibrated to capacity.",
     history: [72, 75, 78, 80, 82, 84, 86, 87],
@@ -240,8 +240,8 @@ const base: Omit<Metric, "accent" | "sourceDetail">[] = [
     target: "stable trend",
     unit: "story points / sprint",
     definition:
-      "Average story points completed per sprint over the last 3–5 sprints. Used for forecasting, not as a target to maximize.",
-    formula: "mean(completed story points) over last 5 sprints",
+      "Average story points completed per Program Increment (P1–P6). Used for forecasting, not as a target to maximize.",
+    formula: "mean(completed story points) per Program Increment (P1–P6)",
     insight:
       "Gently increasing and consistent — a healthy, sustainable signal rather than a spike.",
     history: [34, 36, 35, 38, 39, 40, 41, 42],
@@ -260,7 +260,7 @@ const base: Omit<Metric, "accent" | "sourceDetail">[] = [
     unit: "%",
     definition:
       "Percentage of regression/integration testing that is automated. A leading indicator of release confidence.",
-    formula: "automated test cases / total test cases × 100",
+    formula: "mean of each project's latest GitLab CI pipeline coverage %",
     insight:
       "Up 3 points; on track to clear the 80% target within two sprints.",
     history: [68, 69, 70, 71, 72, 74, 75, 76],
@@ -371,8 +371,8 @@ const SOURCE_DETAIL: Record<string, string> = {
   "cycle-time": "Jira — median of (resolved − work-started) across issues completed in the window, from status-change history.",
   "work-item-age": "Jira — mean age of currently open, in-progress issues (now − work-started), from status history.",
   "blocked-time": "Jira — total time issues spent in a blocked/impediment status, as a share of total item lifetime.",
-  "delivery-predictability": "Jira — completed vs committed story points across the last closed sprints.",
-  "average-velocity": "Jira — mean completed story points across the last closed sprints (needs story-pointed issues).",
+  "delivery-predictability": "Jira — completed vs committed story points per Program Increment (P1–P6).",
+  "average-velocity": "Jira — mean completed story points per Program Increment (P1–P6); needs story-pointed issues.",
   "test-automation-coverage": "GitLab CI — mean of each project's latest pipeline coverage value.",
   "defect-escape-rate": "Jira — defects labelled post-release/production, divided by all defects.",
   "defect-root-cause": "Jira — defects labelled with an upstream root cause (requirements/design/analysis), divided by all defects.",
