@@ -20,6 +20,9 @@ import {
   TrendingUp,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import type { MetricBreakdown } from "@/lib/metrics/breakdown"
+
+export type { MetricBreakdown }
 
 export type Trend = "up" | "down" | "flat"
 export type Source =
@@ -28,13 +31,6 @@ export type Source =
   | "Jira"
   | "GitLab + Jira"
   | "GitHub + Jira"
-
-/** A small drill-down table shown in the metric detail modal (e.g. deployment status counts). */
-export interface MetricBreakdown {
-  title: string
-  columns: string[]
-  rows: { label: string; values: (string | number)[] }[]
-}
 
 export interface Metric {
   id: string

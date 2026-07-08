@@ -1,4 +1,5 @@
 // Pure Jira flow + velocity computation (no DB / no server-only) — unit-testable.
+import type { MetricBreakdown } from "./breakdown"
 
 export interface Metric {
   value: string
@@ -7,6 +8,8 @@ export interface Metric {
   trend: "up" | "down" | "flat"
   /** Optional data-aware explanation shown in the detail modal (esp. for 0/thin values). */
   note?: string
+  /** Optional drill-down table shown in the detail modal. */
+  breakdown?: MetricBreakdown
 }
 
 export interface FlowIssueRow {
@@ -21,9 +24,58 @@ export interface FlowIssueRow {
 
 export interface SprintRow {
   id: number
+  name: string | null
   state: string | null
   startDate: Date | null
   completeDate: Date | null
+}
+
+/** A single status change from an issue's changelog. */
+export interface TransitionRow {
+  issueKey: string
+  toStatus: string | null
+  at: Date | null
+}
+
+const TERMINAL = /done|closed|resolved|cancel/i
+
+function percentileDays(sortedAsc: number[], p: number): number {
+  if (!sortedAsc.length) return 0
+  const idx = Math.min(sortedAsc.length - 1, Math.floor((p / 100) * sortedAsc.length))
+  return sortedAsc[idx]
+}
+
+/** Median time spent in each workflow status, from the changelog transitions. */
+function timeInStage(transitions: TransitionRow[]): MetricBreakdown | undefined {
+  const dated = transitions.filter((t): t is TransitionRow & { at: Date } => t.at != null)
+  if (!dated.length) return undefined
+  const byIssue = new Map<string, (TransitionRow & { at: Date })[]>()
+  for (const t of dated) {
+    const arr = byIssue.get(t.issueKey) ?? []
+    arr.push(t)
+    byIssue.set(t.issueKey, arr)
+  }
+  const durs = new Map<string, number[]>() // status -> days spent
+  for (const arr of byIssue.values()) {
+    arr.sort((a, b) => a.at.getTime() - b.at.getTime())
+    for (let i = 0; i < arr.length - 1; i++) {
+      const st = arr[i].toStatus
+      if (!st || TERMINAL.test(st)) continue
+      const days = (arr[i + 1].at.getTime() - arr[i].at.getTime()) / DAY
+      if (days >= 0) {
+        const a = durs.get(st) ?? []
+        a.push(days)
+        durs.set(st, a)
+      }
+    }
+  }
+  const rows = [...durs.entries()]
+    .map(([status, arr]) => ({ status, med: median(arr), n: arr.length }))
+    .sort((a, b) => b.med - a.med)
+    .slice(0, 8)
+    .map((r) => ({ label: r.status, values: [`${r.med.toFixed(1)}d`, r.n] }))
+  if (!rows.length) return undefined
+  return { title: "Median time in stage (the bottleneck is at the top)", columns: ["Stage", "Median", "Items"], rows }
 }
 
 export interface FlowResult {
@@ -61,7 +113,7 @@ function trendOf(history: number[]): "up" | "down" | "flat" {
 const fmtDays = (d: number) => `${d.toFixed(1)} days`
 
 /** Cycle Time, Work Item Age, Blocked Time from Jira issues. */
-export function computeFlow(issues: FlowIssueRow[], now = new Date()): FlowResult {
+export function computeFlow(issues: FlowIssueRow[], now = new Date(), transitions: TransitionRow[] = []): FlowResult {
   if (!issues.length) return { hasData: false }
   const since = new Date(now.getTime() - WEEKS * 7 * DAY)
   const weekIdx = (d: Date) => Math.min(WEEKS - 1, Math.max(0, Math.floor((d.getTime() - since.getTime()) / (7 * DAY))))
@@ -100,14 +152,60 @@ export function computeFlow(issues: FlowIssueRow[], now = new Date()): FlowResul
   const result: FlowResult = { hasData: true }
   if (cycleAll.length) {
     const hist = cycleByWeek.map((w) => Math.round(median(w) * 10) / 10)
-    result.cycleTime = { value: fmtDays(median(cycleAll)), sub: `median · ${cycleAll.length} items`, history: hist, trend: trendOf(hist) }
+    const asc = [...cycleAll].sort((a, b) => a - b)
+    result.cycleTime = {
+      value: fmtDays(median(cycleAll)),
+      sub: `median · ${cycleAll.length} items`,
+      history: hist,
+      trend: trendOf(hist),
+      note: `Spread: p50 ${percentileDays(asc, 50).toFixed(1)}d · p75 ${percentileDays(asc, 75).toFixed(1)}d · p90 ${percentileDays(asc, 90).toFixed(1)}d. The stage table below shows where items spend the most time.`,
+      breakdown: timeInStage(transitions),
+    }
   }
   if (ages.length) {
-    result.workItemAge = { value: fmtDays(mean(ages)), sub: `mean · ${ages.length} open`, history: [], trend: "flat" }
+    const b: Record<string, number> = { "0–3d": 0, "3–7d": 0, "7–14d": 0, "14d+": 0 }
+    for (const a of ages) {
+      if (a < 3) b["0–3d"]++
+      else if (a < 7) b["3–7d"]++
+      else if (a < 14) b["7–14d"]++
+      else b["14d+"]++
+    }
+    result.workItemAge = {
+      value: fmtDays(mean(ages)),
+      sub: `mean · ${ages.length} open`,
+      history: [],
+      trend: "flat",
+      note:
+        b["14d+"] > 0
+          ? `${b["14d+"]} open item(s) have been in progress over 14 days — the biggest stall risk. Review these first in standup.`
+          : undefined,
+      breakdown: {
+        title: "Open in-progress items by age",
+        columns: ["Age", "Items"],
+        rows: Object.entries(b).map(([label, n]) => ({ label, values: [n] })),
+      },
+    }
   }
   if (lifetimeSecs > 0) {
     const pct = Math.round((blockedSecs / lifetimeSecs) * 1000) / 10
-    result.blockedTime = { value: `${pct}%`, sub: `of item lifetime`, history: [], trend: "flat" }
+    const everBlocked = issues.filter((i) => (i.blockedSeconds ?? 0) > 0).length
+    const blockedDays = blockedSecs / 86400
+    result.blockedTime = {
+      value: `${pct}%`,
+      sub: `of item lifetime`,
+      history: [],
+      trend: "flat",
+      breakdown: {
+        title: "Blocked-time detail",
+        columns: ["Measure", "Value"],
+        rows: [
+          { label: "Issues ever blocked", values: [everBlocked] },
+          { label: "Total blocked time", values: [`${blockedDays.toFixed(1)}d`] },
+          { label: "Avg per blocked issue", values: [everBlocked ? `${(blockedDays / everBlocked).toFixed(1)}d` : "—"] },
+          { label: "Total item lifetime", values: [`${(lifetimeSecs / 86400).toFixed(0)}d`] },
+        ],
+      },
+    }
   }
   return result
 }
@@ -122,6 +220,7 @@ export function computeVelocity(sprints: SprintRow[], issues: FlowIssueRow[], wi
 
   const completedPerSprint: number[] = []
   const predictabilityPerSprint: number[] = []
+  const perSprint: { name: string; committed: number; completed: number }[] = []
   let pointedInClosed = 0
   for (const sprint of closed) {
     const inSprint = issues.filter((i) => i.sprintId === sprint.id)
@@ -129,6 +228,7 @@ export function computeVelocity(sprints: SprintRow[], issues: FlowIssueRow[], wi
     const committed = inSprint.reduce((a, i) => a + (i.storyPoints ?? 0), 0)
     const completed = inSprint.filter((i) => isDone(i.statusCategory)).reduce((a, i) => a + (i.storyPoints ?? 0), 0)
     completedPerSprint.push(completed)
+    perSprint.push({ name: sprint.name ?? `Sprint ${sprint.id}`, committed, completed })
     if (committed > 0) predictabilityPerSprint.push(Math.round((completed / committed) * 1000) / 10)
   }
 
@@ -147,6 +247,11 @@ export function computeVelocity(sprints: SprintRow[], issues: FlowIssueRow[], wi
     history: completedPerSprint.map((v) => Math.round(v)),
     trend: trendOf(completedPerSprint),
     note: velNote,
+    breakdown: {
+      title: "Completed points per sprint",
+      columns: ["Sprint", "Completed"],
+      rows: perSprint.map((s) => ({ label: s.name, values: [s.completed] })),
+    },
   }
   if (predictabilityPerSprint.length) {
     result.deliveryPredictability = {
@@ -154,6 +259,14 @@ export function computeVelocity(sprints: SprintRow[], issues: FlowIssueRow[], wi
       sub: `committed vs completed`,
       history: predictabilityPerSprint,
       trend: trendOf(predictabilityPerSprint),
+      breakdown: {
+        title: "Committed vs completed per sprint",
+        columns: ["Sprint", "Committed", "Completed", "%"],
+        rows: perSprint.map((s) => ({
+          label: s.name,
+          values: [s.committed, s.completed, s.committed > 0 ? `${Math.round((s.completed / s.committed) * 100)}%` : "—"],
+        })),
+      },
     }
   } else {
     result.deliveryPredictability = {

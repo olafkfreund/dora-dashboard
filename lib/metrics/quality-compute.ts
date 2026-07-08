@@ -8,6 +8,7 @@ export interface QualityIssueRow {
 
 export interface CoverageRow {
   coverage: number | null
+  projectPath?: string | null
 }
 
 export interface QualityResult {
@@ -28,6 +29,10 @@ const ESCAPED = /post.?release|production|escaped|prod|customer|live/i
 const UPSTREAM = /requirement|design|analysis|spec|upstream|grooming|refinement/i
 
 const hasLabel = (labels: string[] | null, re: RegExp) => (labels ?? []).some((l) => re.test(l))
+// Root-cause sub-categories (for the breakdown table).
+const REQUIREMENTS = /requirement|spec|grooming|refinement/i
+const DESIGN = /design/i
+const ANALYSIS = /analysis|upstream/i
 const flat = "flat" as const
 
 /**
@@ -42,6 +47,7 @@ export function computeQuality(issues: QualityIssueRow[]): QualityResult {
   const escaped = defects.filter((i) => hasLabel(i.labels, ESCAPED)).length
   const upstream = defects.filter((i) => hasLabel(i.labels, UPSTREAM)).length
   const pct = (n: number) => Math.round((n / defects.length) * 1000) / 10
+  const countLabel = (re: RegExp) => defects.filter((i) => hasLabel(i.labels, re)).length
 
   return {
     hasData: true,
@@ -54,6 +60,14 @@ export function computeQuality(issues: QualityIssueRow[]): QualityResult {
         escaped === 0
           ? `None of the ${defects.length} defects carry a post-release/production label, so the escape rate is 0. Tag escaped defects (e.g. "Prod-Incident", "post-release", "production") for this to reflect real leakage.`
           : undefined,
+      breakdown: {
+        title: "Defects: escaped vs contained",
+        columns: ["Category", "Defects"],
+        rows: [
+          { label: "Escaped (post-release)", values: [escaped] },
+          { label: "Contained (pre-release)", values: [defects.length - escaped] },
+        ],
+      },
     },
     defectRootCause: {
       value: `${pct(upstream)}%`,
@@ -64,6 +78,16 @@ export function computeQuality(issues: QualityIssueRow[]): QualityResult {
         upstream === 0
           ? `None of the ${defects.length} defects carry an upstream root-cause label (requirements/design/analysis/refinement). Tag each bug with the root-cause category so this metric can attribute defects.`
           : undefined,
+      breakdown: {
+        title: "Defects by root-cause category",
+        columns: ["Root cause", "Defects"],
+        rows: [
+          { label: "Requirements", values: [countLabel(REQUIREMENTS)] },
+          { label: "Design", values: [countLabel(DESIGN)] },
+          { label: "Analysis", values: [countLabel(ANALYSIS)] },
+          { label: "Unclassified", values: [defects.length - upstream] },
+        ],
+      },
     },
   }
 }
@@ -73,13 +97,27 @@ export function computeCoverage(rows: CoverageRow[]): CoverageResult {
   const vals = rows.map((r) => r.coverage).filter((c): c is number => typeof c === "number")
   if (!vals.length) return { hasData: false }
   const avg = vals.reduce((a, b) => a + b, 0) / vals.length
+  const projectRows = rows
+    .filter((r): r is CoverageRow & { coverage: number } => typeof r.coverage === "number")
+    .sort((a, b) => a.coverage - b.coverage) // lowest coverage first (needs attention)
+    .slice(0, 15)
+    .map((r) => ({ label: r.projectPath ?? "(project)", values: [`${Math.round(r.coverage)}%`] }))
   return {
     hasData: true,
     testAutomationCoverage: {
       value: `${Math.round(avg)}%`,
-      sub: `mean · ${vals.length} projects`,
+      sub: `mean · ${vals.length} project${vals.length === 1 ? "" : "s"}`,
       history: [],
       trend: flat,
+      note:
+        vals.length === 1
+          ? "Coverage is from a single project's latest pipeline. Publish coverage in more pipelines for a fuller picture."
+          : undefined,
+      breakdown: {
+        title: "Latest coverage by project (lowest first)",
+        columns: ["Project", "Coverage"],
+        rows: projectRows,
+      },
     },
   }
 }

@@ -40,6 +40,30 @@ describe("computeFlow", () => {
     const rows = [issue({ createdAt: d(10), resolvedAt: NOW, statusCategory: "Done", blockedSeconds: DAY / 1000 })]
     expect(computeFlow(rows, NOW).blockedTime?.value).toBe("10%")
   })
+
+  it("cycle time includes a time-in-stage breakdown from transitions", () => {
+    const rows = [issue({ createdAt: d(10), inProgressAt: d(6), resolvedAt: d(2), statusCategory: "Done" })]
+    const transitions = [
+      { issueKey: "A-1", toStatus: "In Progress", at: d(6) },
+      { issueKey: "A-1", toStatus: "In QA", at: d(4) }, // 2 days In Progress
+      { issueKey: "A-1", toStatus: "Done", at: d(2) }, // 2 days In QA; Done terminal → excluded
+    ]
+    const bd = computeFlow(rows, NOW, transitions).cycleTime?.breakdown
+    expect(bd?.title).toMatch(/time in stage/i)
+    const stages = Object.fromEntries(bd!.rows.map((r) => [r.label, r.values[0]]))
+    expect(stages["In Progress"]).toBe("2.0d")
+    expect(stages["In QA"]).toBe("2.0d")
+    expect(stages["Done"]).toBeUndefined()
+  })
+
+  it("work item age has age buckets (0-3 / 3-7 / 7-14 / 14d+)", () => {
+    const open = (daysAgo: number) => issue({ statusCategory: "In Progress", inProgressAt: d(daysAgo), createdAt: d(daysAgo) })
+    const bd = computeFlow([open(1), open(5), open(20)], NOW).workItemAge?.breakdown
+    expect(bd!.rows[0].values[0]).toBe(1) // 0-3d
+    expect(bd!.rows[1].values[0]).toBe(1) // 3-7d
+    expect(bd!.rows[2].values[0]).toBe(0) // 7-14d
+    expect(bd!.rows[3].values[0]).toBe(1) // 14d+
+  })
 })
 
 describe("computeVelocity", () => {
@@ -49,8 +73,8 @@ describe("computeVelocity", () => {
 
   it("average velocity + predictability over closed sprints", () => {
     const sprints: SprintRow[] = [
-      { id: 1, state: "closed", startDate: d(28), completeDate: d(14) },
-      { id: 2, state: "closed", startDate: d(14), completeDate: d(1) },
+      { id: 1, name: "Sprint 1", state: "closed", startDate: d(28), completeDate: d(14) },
+      { id: 2, name: "Sprint 2", state: "closed", startDate: d(14), completeDate: d(1) },
     ]
     const issues = [
       // sprint 1: committed 10, completed 8
@@ -65,7 +89,7 @@ describe("computeVelocity", () => {
   })
 
   it("explains a 0 velocity when the closed sprint has no story-pointed issues", () => {
-    const sprints: SprintRow[] = [{ id: 1, state: "closed", startDate: new Date(), completeDate: new Date() }]
+    const sprints: SprintRow[] = [{ id: 1, name: "Sprint 1", state: "closed", startDate: new Date(), completeDate: new Date() }]
     const issues: FlowIssueRow[] = [
       { statusCategory: "In Progress", storyPoints: null, sprintId: 1, createdAt: new Date(), inProgressAt: new Date(), resolvedAt: null, blockedSeconds: 0 },
     ]

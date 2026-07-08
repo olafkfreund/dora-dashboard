@@ -1,6 +1,6 @@
 import "server-only"
 import { db } from "@/db"
-import { jiraIssues, jiraSprints } from "@/db/schema"
+import { jiraIssues, jiraSprints, jiraTransitions } from "@/db/schema"
 import { computeFlow, computeVelocity, type FlowResult, type VelocityResult } from "./flow-compute"
 import { computeQuality, type QualityResult } from "./quality-compute"
 import { computeAllocation, type AllocResult } from "./allocation-compute"
@@ -9,7 +9,7 @@ import { computeAllocation, type AllocResult } from "./allocation-compute"
 export async function computeJiraMetrics(
   now = new Date()
 ): Promise<{ flow: FlowResult; velocity: VelocityResult; quality: QualityResult; allocation: AllocResult }> {
-  const [issues, sprints] = await Promise.all([
+  const [issues, sprints, transitions] = await Promise.all([
     db
       .select({
         issueType: jiraIssues.issueType,
@@ -26,11 +26,19 @@ export async function computeJiraMetrics(
     db
       .select({
         id: jiraSprints.id,
+        name: jiraSprints.name,
         state: jiraSprints.state,
         startDate: jiraSprints.startDate,
         completeDate: jiraSprints.completeDate,
       })
       .from(jiraSprints),
+    db
+      .select({
+        issueKey: jiraTransitions.issueKey,
+        toStatus: jiraTransitions.toStatus,
+        at: jiraTransitions.at,
+      })
+      .from(jiraTransitions),
   ])
   const qualityRows = issues.map((i) => ({ issueType: i.issueType, labels: (i.labels as string[] | null) ?? null }))
   const allocRows = issues.map((i) => ({
@@ -39,7 +47,7 @@ export async function computeJiraMetrics(
     storyPoints: i.storyPoints,
   }))
   return {
-    flow: computeFlow(issues, now),
+    flow: computeFlow(issues, now, transitions),
     velocity: computeVelocity(sprints, issues),
     quality: computeQuality(qualityRows),
     allocation: computeAllocation(allocRows),

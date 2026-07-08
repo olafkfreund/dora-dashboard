@@ -54,6 +54,14 @@ export function computeAllocation(issues: AllocIssueRow[]): AllocResult {
       history: [],
       trend: "flat",
       note,
+      breakdown: {
+        title: "Effort by investment category",
+        columns: ["Category", "Points", "%"],
+        rows: (["feature", "ktlo", "debt", "support"] as AllocCategory[]).map((c) => ({
+          label: c === "ktlo" ? "KTLO" : c[0].toUpperCase() + c.slice(1),
+          values: [w[c], `${pct(w[c])}%`],
+        })),
+      },
     },
   }
 }
