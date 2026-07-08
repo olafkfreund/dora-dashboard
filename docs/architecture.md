@@ -78,6 +78,15 @@ sequenceDiagram
 </pre>
 {% endraw %}
 
+<div class="note">
+<strong>Definitions are applied at compute time.</strong> What counts as a production
+deployment or a change failure — the environment allowlist, ref/branch pattern, failure
+statuses, rolling window, and Elite/High/Medium bands — comes from the org-level metric
+config, not from ingestion. Admins can change a definition under <em>Settings → Metrics</em>
+and it takes effect on the next dashboard load with <strong>no re-sync</strong>. See the
+<a href="{{ '/metrics/#configuring-metric-definitions' | relative_url }}">Metrics guide</a>.
+</div>
+
 ## Data-flow access &amp; trust boundaries
 
 <p>Access is <strong>default-deny</strong>: every route requires an authenticated session, and
