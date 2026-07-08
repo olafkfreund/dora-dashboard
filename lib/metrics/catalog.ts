@@ -122,14 +122,14 @@ const base: Omit<Metric, "accent" | "sourceDetail">[] = [
     icon: AlertTriangle,
     trend: "down",
     good: "down",
-    source: "GitLab",
+    source: "GitLab + Jira",
     target: "≤ 15% (Elite)",
     unit: "%",
     definition:
       "Percentage of deployments causing a failure in production that requires remediation (hotfix, rollback, patch).",
-    formula: "failed deployments / total deployments × 100",
+    formula: "prod incidents + Production-env defects ÷ production deployments × 100 (or failed deploys when no incident data)",
     insight:
-      "Within Elite range and falling. Most failures are concentrated in one legacy component slated for refactor.",
+      "Change failures are read from Jira Incidents + Production defects — a failed GitLab deploy job is a job error, not a production failure.",
     history: [13.2, 12.8, 12.1, 11.6, 10.9, 10.6, 10.4, 9.4],
   },
   {
@@ -366,7 +366,7 @@ const base: Omit<Metric, "accent" | "sourceDetail">[] = [
 const SOURCE_DETAIL: Record<string, string> = {
   "deployment-frequency": "GitLab — count of successful production deployments, divided by the weeks in the rolling window.",
   "lead-time-for-changes": "GitLab — median time from a change's first commit (matched via its merge request) to the production deployment that shipped it.",
-  "change-failure-rate": "GitLab — deployments whose status counts as a failure, divided by all considered deployments in the window.",
+  "change-failure-rate": "Jira Incidents + Production-environment defects in the window, divided by GitLab production deployments (falls back to failed deploy jobs when no incident data exists).",
   mttr: "GitLab — median time from a failed deployment to the next successful deployment of the same project (deploy-recovery proxy).",
   "cycle-time": "Jira — median of (resolved − work-started) across issues completed in the window, from status-change history.",
   "work-item-age": "Jira — mean age of currently open, in-progress issues (now − work-started), from status history.",

@@ -86,6 +86,38 @@ cluster except your configured mail/webhook target.
 <p>All metrics are computed and displayed at <strong>team / group level only</strong> — the
 product deliberately does not rank individual developers.</p>
 
+## How each Jira metric is derived (fields &amp; formulas)
+
+<p>Every Jira metric is computed from ingested issue data — never a live query. Custom fields
+vary per instance, so the ingestor <strong>auto-detects them by name</strong> (the IDs below are
+this instance's). From each issue's <strong>changelog</strong> we derive three timing signals once,
+at ingest, and store them: <code>inProgressAt</code> (first transition out of the initial status),
+<code>resolvedAt</code> (resolution date), and <code>blockedSeconds</code> (time in a
+Blocked/On-Hold/Impediment status). <strong>Sub-tasks are excluded</strong> from flow, velocity and
+allocation (they sit under Stories and would double-count).</p>
+
+<div class="table-wrap" markdown="0">
+<table>
+<thead><tr><th>Metric</th><th>Jira source (field / signal)</th><th>Scope</th><th>Formula</th></tr></thead>
+<tbody>
+<tr><td>Cycle Time</td><td>changelog → <code>inProgressAt</code>, <code>resolvedAt</code></td><td>Done items, no sub-tasks</td><td>median(resolved − in-progress)</td></tr>
+<tr><td>Work Item Age</td><td>changelog → <code>inProgressAt</code></td><td>open in-progress, no sub-tasks</td><td>mean(now − in-progress)</td></tr>
+<tr><td>Blocked Time</td><td>changelog → time in a Blocked/On-Hold/Impediment status</td><td>all items</td><td>Σ blocked ÷ Σ item-lifetime × 100</td></tr>
+<tr><td>Feature Cycle Time</td><td>issue type <em>Feature</em> + <code>inProgressAt</code>/<code>resolvedAt</code></td><td>resolved Features</td><td>median(resolved − started)</td></tr>
+<tr><td>Average Velocity</td><td>Story Points (<code>cf10002</code>) + Program Increment (<code>cf10001</code>) + status</td><td>Done, no sub-tasks</td><td>mean(completed points) per PI (P1–P6)</td></tr>
+<tr><td>Delivery Predictability</td><td>Story Points + Program Increment + status</td><td>no sub-tasks</td><td>completed ÷ committed points per PI; mean across PIs</td></tr>
+<tr><td>Investment Allocation</td><td>issue type + labels, weighted by Story Points</td><td>no sub-tasks</td><td>points per category ÷ total × 100 (Feature/KTLO/Debt/Support)</td></tr>
+<tr><td>Defect Escape Rate</td><td>Environment Type (<code>cf10005</code>)</td><td>Bug/Incident with an environment</td><td>Production ÷ all-with-environment × 100</td></tr>
+<tr><td>Defect Root Cause</td><td>Root Cause Analysis (<code>cf10004</code>)</td><td>Bug/Incident, triaged</td><td>(Requirements + Design) ÷ triaged × 100</td></tr>
+<tr><td>Change Failure Rate*</td><td>Jira Incidents + Production-env defects (<code>cf10005</code>)</td><td>window</td><td>failures ÷ GitLab prod deployments × 100</td></tr>
+<tr><td>MTTR (incident mode)*</td><td>Jira Incidents + Production defects</td><td>resolved in window</td><td>median(resolved − created)</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>* Change Failure Rate and incident-mode MTTR combine the Jira failure signal with GitLab
+deployments — a failed GitLab deploy <em>job</em> is a job error, not a production failure.</p>
+
 ## DORA-4 (live from GitLab)
 
 <div class="metric-doc" markdown="0">
@@ -128,7 +160,10 @@ measure from the feature MR’s first commit.</div>
 remediation (rollback, hotfix, re-run) — a quality/stability signal.</p>
 <p><strong>How it’s collected.</strong> Each deployment’s <code>status</code>
 (<code>success</code> / <code>failed</code>) is stored; the rate is failed over total.</p>
-<code class="formula">failed deployments / (successful + failed) × 100</code>
+<code class="formula">Jira Incidents + Production-env defects ÷ production deployments × 100</code>
+<p>A failed GitLab <em>deploy job</em> is a job error, not a production failure, so change
+failures are read from Jira (Incident issues + defects whose Environment Type is Production).
+If an instance has no such signal, the portal falls back to failed-deploy-status ÷ deployments.</p>
 <div class="scenario"><strong>Real-life:</strong> 4 failed of 751 production deployments =
 <strong>0.5%</strong> — comfortably “Elite” (≤ 15%). A spike would point you at a specific
 service or pipeline stage introducing regressions.</div>
