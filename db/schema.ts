@@ -109,6 +109,16 @@ export const ssoProviders = pgTable("sso_provider", {
   updatedById: text("updatedById"),
 })
 
+// --- Metric configuration (org-level). Single row keyed "default". Audited. ---
+// Defines what counts as a deployment/failure, the rolling window, DORA benchmark
+// bands, and per-metric targets. Empty config reproduces the built-in defaults.
+export const metricConfig = pgTable("metric_config", {
+  id: text("id").primaryKey().default("default"),
+  config: jsonb("config").notNull().default({}),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  updatedById: text("updatedById"),
+})
+
 // --- Ingested delivery data (GitLab). Raw events for DORA computation. ---
 export const gitlabDeployments = pgTable("gitlab_deployment", {
   // `${projectId}:${deploymentId}`

@@ -18,6 +18,7 @@ import {
   type Metric,
 } from "@/components/metrics-data"
 import { classifyTier, type TierTone } from "@/lib/metrics/dora-tier"
+import type { MetricConfig } from "@/lib/metrics/config"
 import {
   BarChart,
   CountUp,
@@ -25,6 +26,9 @@ import {
   RadialGauge,
 } from "@/components/metric-charts"
 import { MetricDialog } from "@/components/metric-dialog"
+
+// Configured DORA benchmark bands, provided once so TierBadge needn't be prop-drilled.
+const BandsContext = React.createContext<MetricConfig["bands"] | undefined>(undefined)
 
 type ViewMode = "cards" | "charts" | "modern"
 const STORAGE_KEY = "dora-view-mode"
@@ -66,7 +70,8 @@ const TIER_CLS: Record<TierTone, string> = {
 
 /** DORA performance-tier badge (Elite/High/Medium/Low) — DORA-4 metrics only. */
 function TierBadge({ metric }: { metric: Metric }) {
-  const t = classifyTier(metric.id, metric.value)
+  const bands = React.useContext(BandsContext)
+  const t = classifyTier(metric.id, metric.value, bands)
   if (!t) return null
   return (
     <span
@@ -297,8 +302,10 @@ function GroupHeading({ group }: { group: string }) {
 
 export function MetricExplorer({
   overrides,
+  config,
 }: {
   overrides?: Record<string, MetricOverride>
+  config?: MetricConfig
 }) {
   const [view, setView] = React.useState<ViewMode>("cards")
   const [openId, setOpenId] = React.useState<string | null>(null)
@@ -339,7 +346,7 @@ export function MetricExplorer({
   const onOpen = (id: string) => setOpenId(id)
 
   return (
-    <>
+    <BandsContext.Provider value={config?.bands}>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">
           {view === "cards" && "Compact cards — click any metric for details."}
@@ -379,7 +386,7 @@ export function MetricExplorer({
       {view === "charts" && <ChartsView items={items} liveIds={liveIds} onOpen={onOpen} />}
       {view === "modern" && <ModernView items={items} liveIds={liveIds} onOpen={onOpen} />}
 
-      {active && <MetricDialog metric={active} onClose={() => setOpenId(null)} />}
-    </>
+      {active && <MetricDialog metric={active} config={config} onClose={() => setOpenId(null)} />}
+    </BandsContext.Provider>
   )
 }

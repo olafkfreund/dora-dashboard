@@ -33,4 +33,11 @@ describe("classifyTier", () => {
     expect(classifyTier("cycle-time", "3.1 days")).toBeNull()
     expect(classifyTier("average-velocity", "42 pts")).toBeNull()
   })
+
+  it("uses custom bands when provided", () => {
+    const bands = { "change-failure-rate": { elite: 5, high: 10, medium: 20 } as const }
+    expect(classifyTier("change-failure-rate", "4%", bands)?.tier).toBe("Elite") // ≤5
+    expect(classifyTier("change-failure-rate", "9.4%", bands)?.tier).toBe("High") // ≤10
+    expect(classifyTier("change-failure-rate", "9.4%")?.tier).toBe("Elite") // default band unchanged
+  })
 })

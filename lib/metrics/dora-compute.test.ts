@@ -80,3 +80,52 @@ describe("computeDoraFromRows", () => {
     expect(r.mttr?.value).toBe("3.0 hrs")
   })
 })
+
+describe("computeDoraFromRows — configurable definition", () => {
+  const at = (daysAgo: number): Date => new Date(NOW.getTime() - daysAgo * DAY)
+  const DEF = { environments: [] as string[], refPattern: null as string | null, failureStatuses: ["failed"] }
+
+  it("environment allowlist excludes deploys from other environments", () => {
+    const rows: DeploymentRow[] = [
+      { projectId: 1, status: "success", finishedAt: at(1), committedAt: null, environment: "production" },
+      { projectId: 1, status: "success", finishedAt: at(2), committedAt: null, environment: "staging" },
+    ]
+    expect(computeDoraFromRows(rows, NOW).deploymentsTotal).toBe(2) // default: match all
+    const prod = computeDoraFromRows(rows, NOW, { deployment: { ...DEF, environments: ["production"] } })
+    expect(prod.deploymentsTotal).toBe(1)
+  })
+
+  it("refPattern filters deploys by branch/ref", () => {
+    const rows: DeploymentRow[] = [
+      { projectId: 1, status: "success", finishedAt: at(1), committedAt: null, ref: "main" },
+      { projectId: 1, status: "success", finishedAt: at(2), committedAt: null, ref: "feature/x" },
+    ]
+    const r = computeDoraFromRows(rows, NOW, { deployment: { ...DEF, refPattern: "^main$" } })
+    expect(r.deploymentsTotal).toBe(1)
+  })
+
+  it("counts a configured custom status as a change failure", () => {
+    const rows: DeploymentRow[] = [
+      { projectId: 1, status: "success", finishedAt: at(1), committedAt: null },
+      { projectId: 1, status: "canceled", finishedAt: at(2), committedAt: null },
+    ]
+    // default: "canceled" is not a failure → 0%
+    expect(computeDoraFromRows(rows, NOW).changeFailureRate?.value).toBe("0%")
+    const r = computeDoraFromRows(rows, NOW, { deployment: { ...DEF, failureStatuses: ["failed", "canceled"] } })
+    expect(r.changeFailureRate?.value).toBe("50%") // 1 of 2
+  })
+
+  it("windowWeeks changes the frequency denominator", () => {
+    const rows = Array.from({ length: 4 }, (_, i) => dep(1, "success", i * 7 + 1)) // days 1,8,15,22
+    expect(computeDoraFromRows(rows, NOW).deploymentFrequency?.value).toBe("0.5/wk") // 4/8
+    const r = computeDoraFromRows(rows, NOW, { windowWeeks: 4 })
+    expect(r.deploymentFrequency?.value).toBe("1.0/wk") // 4/4
+    expect(r.windowWeeks).toBe(4)
+  })
+
+  it("an invalid refPattern is ignored (no crash, matches all)", () => {
+    const rows: DeploymentRow[] = [{ projectId: 1, status: "success", finishedAt: at(1), committedAt: null, ref: "main" }]
+    const r = computeDoraFromRows(rows, NOW, { deployment: { ...DEF, refPattern: "([" } })
+    expect(r.deploymentsTotal).toBe(1)
+  })
+})

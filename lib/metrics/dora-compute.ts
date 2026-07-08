@@ -23,6 +23,8 @@ export interface DeploymentRow {
   finishedAt: Date | null
   committedAt?: Date | null
   sha?: string | null
+  environment?: string | null
+  ref?: string | null
 }
 
 export interface MrRow {
@@ -30,11 +32,35 @@ export interface MrRow {
   firstCommitAt: Date | null
 }
 
+/** What counts as a (production) deployment / change failure — from metric config. */
+export interface DeploymentDef {
+  /** Environment allowlist; [] = match every environment. */
+  environments: string[]
+  /** Regex on the deployment ref/branch; null = no filter. */
+  refPattern: string | null
+  /** Deployment statuses that count as a change failure. */
+  failureStatuses: string[]
+}
+
 export interface DoraOpts {
   /** Merged MRs, for MR-first-commit Lead Time correlation. */
   mrs?: MrRow[]
   /** "mr" = feature MR's first commit → prod (default, falls back to deployed-commit date); "gitops" = deployed-commit date only. */
   leadTimeMode?: "mr" | "gitops"
+  /** Rolling window length in weeks (default WEEKS). */
+  windowWeeks?: number
+  /** Deployment/failure definition; defaults to match-all + status "failed". */
+  deployment?: DeploymentDef
+}
+
+/** Build a RegExp, returning null on an empty or invalid pattern (never throws). */
+function safeRegExp(pattern: string | null | undefined): RegExp | null {
+  if (!pattern) return null
+  try {
+    return new RegExp(pattern)
+  } catch {
+    return null
+  }
 }
 
 export const WEEKS = 8
@@ -67,15 +93,25 @@ function fmtDuration(ms: number): string {
   return `${(ms / HOUR).toFixed(1)} hrs`
 }
 
-function weekIndex(d: Date, since: Date): number {
-  return Math.min(WEEKS - 1, Math.floor((d.getTime() - since.getTime()) / (7 * DAY)))
-}
-
 export function computeDoraFromRows(rows: DeploymentRow[], now = new Date(), opts: DoraOpts = {}): DoraResult {
-  const since = new Date(now.getTime() - WEEKS * 7 * DAY)
-  const inWindow = rows.filter((r) => r.finishedAt && r.finishedAt >= since)
+  const weeks = opts.windowWeeks ?? WEEKS
+  const since = new Date(now.getTime() - weeks * 7 * DAY)
+  const wk = (d: Date): number =>
+    Math.min(weeks - 1, Math.floor((d.getTime() - since.getTime()) / (7 * DAY)))
+
+  // Deployment definition: environment allowlist + ref pattern + failure statuses.
+  const envs = opts.deployment?.environments ?? []
+  const refRe = safeRegExp(opts.deployment?.refPattern)
+  const failureSet = new Set(opts.deployment?.failureStatuses ?? [FAILED])
+  const matchesDef = (r: DeploymentRow): boolean =>
+    (envs.length === 0 || (r.environment != null && envs.includes(r.environment))) &&
+    (!refRe || (r.ref != null && refRe.test(r.ref)))
+  const isFailure = (r: DeploymentRow): boolean => failureSet.has(r.status ?? "")
+
+  const defined = rows.filter(matchesDef)
+  const inWindow = defined.filter((r) => r.finishedAt && r.finishedAt >= since)
   if (inWindow.length === 0) {
-    return { hasData: false, deploymentsTotal: 0, windowWeeks: WEEKS }
+    return { hasData: false, deploymentsTotal: 0, windowWeeks: weeks }
   }
 
   // Map deployed commit SHA → the MR's first-commit date (for MR-based lead time).
@@ -87,19 +123,19 @@ export function computeDoraFromRows(rows: DeploymentRow[], now = new Date(), opt
     }
   }
 
-  const success = new Array(WEEKS).fill(0)
-  const failed = new Array(WEEKS).fill(0)
-  const leadByWeek: number[][] = Array.from({ length: WEEKS }, () => [])
-  const mttrByWeek: number[][] = Array.from({ length: WEEKS }, () => [])
+  const success = new Array(weeks).fill(0)
+  const failed = new Array(weeks).fill(0)
+  const leadByWeek: number[][] = Array.from({ length: weeks }, () => [])
+  const mttrByWeek: number[][] = Array.from({ length: weeks }, () => [])
   const leadAll: number[] = []
   const mttrAll: number[] = []
 
   for (const r of inWindow) {
     if (!r.finishedAt) continue
-    const idx = weekIndex(r.finishedAt, since)
+    const idx = wk(r.finishedAt)
     if (idx < 0) continue
     if (r.status === SUCCESS) success[idx]++
-    else if (r.status === FAILED) failed[idx]++
+    else if (isFailure(r)) failed[idx]++
 
     // Lead Time: prefer the feature MR's first commit (deploy sha == MR merge sha);
     // otherwise fall back to the deployed commit's own date.
@@ -127,13 +163,13 @@ export function computeDoraFromRows(rows: DeploymentRow[], now = new Date(), opt
   for (const arr of byProject.values()) {
     arr.sort((a, b) => a.finishedAt!.getTime() - b.finishedAt!.getTime())
     for (let i = 0; i < arr.length; i++) {
-      if (arr[i].status !== FAILED) continue
+      if (!isFailure(arr[i])) continue
       const failTime = arr[i].finishedAt!.getTime()
       const next = arr.slice(i + 1).find((x) => x.status === SUCCESS)
       if (next) {
         const recovery = next.finishedAt!.getTime() - failTime
         if (recovery > 0) {
-          mttrByWeek[weekIndex(arr[i].finishedAt!, since)].push(recovery)
+          mttrByWeek[wk(arr[i].finishedAt!)].push(recovery)
           mttrAll.push(recovery)
         }
       }
@@ -145,8 +181,8 @@ export function computeDoraFromRows(rows: DeploymentRow[], now = new Date(), opt
   const totalConsidered = totalSuccess + totalFailed
 
   const deploymentFrequency: DoraMetric = {
-    value: `${(totalSuccess / WEEKS).toFixed(1)}/wk`,
-    sub: `${totalSuccess} prod deploys · ${WEEKS}w`,
+    value: `${(totalSuccess / weeks).toFixed(1)}/wk`,
+    sub: `${totalSuccess} prod deploys · ${weeks}w`,
     history: success.slice(),
     trend: trendOf(success),
   }
@@ -165,7 +201,7 @@ export function computeDoraFromRows(rows: DeploymentRow[], now = new Date(), opt
   const result: DoraResult = {
     hasData: true,
     deploymentsTotal: inWindow.length,
-    windowWeeks: WEEKS,
+    windowWeeks: weeks,
     deploymentFrequency,
     changeFailureRate,
   }

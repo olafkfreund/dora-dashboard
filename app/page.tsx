@@ -5,6 +5,7 @@ import { computeDora } from "@/lib/metrics/dora"
 import { computeJiraMetrics } from "@/lib/metrics/jira-metrics"
 import { computeCoverageMetric } from "@/lib/metrics/coverage"
 import { computePrCycleMetric } from "@/lib/metrics/pr-cycle"
+import { getMetricConfig } from "@/lib/metrics/config-store"
 
 export default async function Home() {
   const user = await requireUser()
@@ -52,6 +53,7 @@ export default async function Home() {
     // MR data not ready — keep sample
   }
   const live = Object.keys(overrides).length > 0
+  const metricConfig = await getMetricConfig()
 
   return (
     <div className="min-h-screen">
@@ -70,7 +72,7 @@ export default async function Home() {
           </h2>
         </div>
 
-        <MetricExplorer overrides={overrides} />
+        <MetricExplorer overrides={overrides} config={metricConfig} />
       </main>
     </div>
   )

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { TrendBadge, type Metric } from "@/components/metrics-data"
 import { GradientAreaChart } from "@/components/metric-charts"
 import { classifyTier } from "@/lib/metrics/dora-tier"
+import type { MetricConfig, DoraMetricId } from "@/lib/metrics/config"
 
 const TIER_CLS = {
   elite: "border-emerald-500/30 bg-emerald-500/15 text-emerald-500",
@@ -14,15 +15,21 @@ const TIER_CLS = {
   low: "border-red-500/30 bg-red-500/15 text-red-500",
 } as const
 
+const DORA_IDS = new Set(["deployment-frequency", "lead-time-for-changes", "change-failure-rate", "mttr"])
+
 export function MetricDialog({
   metric,
+  config,
   onClose,
 }: {
   metric: Metric
+  config?: MetricConfig
   onClose: () => void
 }) {
   const Icon = metric.icon
   const closeRef = React.useRef<HTMLButtonElement>(null)
+  const bands = config?.bands
+  const isDora = DORA_IDS.has(metric.id)
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -78,7 +85,7 @@ export function MetricDialog({
               <div className="flex items-center gap-2">
                 <span className="text-3xl font-semibold tracking-tight">{metric.value}</span>
                 {(() => {
-                  const t = classifyTier(metric.id, metric.value)
+                  const t = classifyTier(metric.id, metric.value, bands)
                   return t ? (
                     <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${TIER_CLS[t.tone]}`}>
                       {t.tier}
@@ -113,6 +120,40 @@ export function MetricDialog({
               {metric.formula}
             </code>
           </div>
+
+          {isDora && config && (
+            <div>
+              <h3 className="mb-1 text-sm font-semibold">Active rules · lineage</h3>
+              <p className="mb-2 text-xs text-muted-foreground">
+                The current configured definition behind this number (Settings → Metrics).
+              </p>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+                <dt className="text-muted-foreground">Rolling window</dt>
+                <dd>{config.windowWeeks} weeks</dd>
+                <dt className="text-muted-foreground">Environments</dt>
+                <dd>
+                  {config.deployment.environments.length
+                    ? config.deployment.environments.join(", ")
+                    : "all environments"}
+                </dd>
+                <dt className="text-muted-foreground">Ref pattern</dt>
+                <dd className="font-mono">{config.deployment.refPattern ?? "any"}</dd>
+                <dt className="text-muted-foreground">Failure statuses</dt>
+                <dd>{config.deployment.failureStatuses.join(", ")}</dd>
+                {(() => {
+                  const b = bands?.[metric.id as DoraMetricId]
+                  return b ? (
+                    <>
+                      <dt className="text-muted-foreground">Bands ({metric.unit})</dt>
+                      <dd>
+                        Elite {b.elite} · High {b.high} · Medium {b.medium}
+                      </dd>
+                    </>
+                  ) : null
+                })()}
+              </dl>
+            </div>
+          )}
 
           <div>
             <h3 className="mb-1 text-sm font-semibold">Insight</h3>

@@ -4,8 +4,10 @@ import { db } from "@/db"
 import { integrations, ssoProviders } from "@/db/schema"
 import { AppHeader } from "@/components/app-header"
 import { features } from "@/lib/features"
+import { getMetricConfig } from "@/lib/metrics/config-store"
 import { IntegrationsPanel, type IntegrationView } from "./integrations-panel"
 import { SsoPanel, type SsoView } from "./sso-panel"
+import { MetricsPanel } from "./metrics-panel"
 
 export const metadata = { title: "Settings · DORA Dashboard" }
 
@@ -39,9 +41,10 @@ function toSsoView(
 
 export default async function SettingsPage() {
   const admin = await requireAdmin()
-  const [intRows, ssoRows, h] = await Promise.all([
+  const [intRows, ssoRows, metricCfg, h] = await Promise.all([
     db.select().from(integrations),
     db.select().from(ssoProviders),
+    getMetricConfig(),
     headers(),
   ])
   const gitlabRow = intRows.find((r) => r.provider === "GITLAB")
@@ -87,6 +90,13 @@ export default async function SettingsPage() {
             Data sources
           </h2>
           <IntegrationsPanel gitlab={gitlab} github={github} jira={jira} gitlabLastSync={gitlabLastSync} jiraLastSync={jiraLastSync} />
+        </section>
+
+        <section>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Metrics
+          </h2>
+          <MetricsPanel config={metricCfg} />
         </section>
       </main>
     </div>

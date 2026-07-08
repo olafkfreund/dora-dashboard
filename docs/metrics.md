@@ -235,6 +235,38 @@ requirements, the highest-leverage fix is refinement/BA quality, not more testin
 </table>
 </div>
 
+## Configuring metric definitions
+
+The single most common cause of "these numbers look wrong" is a disagreement over
+**what counts** — which environments are production, which branch ships, what a failure is.
+Admins can configure these definitions under **Settings → Metrics**; changes are **audited**
+and take effect immediately. Leaving everything blank reproduces the standard DORA behaviour.
+
+<div class="table-wrap" markdown="0">
+<table>
+<thead><tr><th>Setting</th><th>What it controls</th><th>Default</th></tr></thead>
+<tbody>
+<tr><td>Production environments</td><td>Only deployments to these environment names count. Comma-separated; blank = every environment.</td><td>all environments</td></tr>
+<tr><td>Ref / branch pattern</td><td>Regex the deployment ref/branch must match (e.g. <code>^(main|release/.*)$</code>). Blank = any.</td><td>any</td></tr>
+<tr><td>Failure statuses</td><td>Which deployment statuses count as a change failure (drives Change Failure Rate &amp; MTTR).</td><td><code>failed</code></td></tr>
+<tr><td>Rolling window</td><td>Number of weeks of history each metric is computed over.</td><td>8 weeks</td></tr>
+<tr><td>Benchmark bands</td><td>The Elite / High / Medium thresholds per DORA metric (Low is anything beyond Medium).</td><td>standard DORA bands</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<strong>Lineage.</strong> Open any DORA card's detail view to see an <em>“Active rules · lineage”</em>
+block showing the exact definition behind that number — window, environment allowlist, ref
+pattern, failure statuses, and the band thresholds in force. This makes every figure defensible
+in an audit.
+</div>
+
+<p>Filtering is applied at compute time against already-ingested deployments, so changing a
+definition takes effect on the next page load with <strong>no re-sync required</strong>. Use
+<strong>Reset to DORA defaults</strong> to clear all overrides. Only <strong>Admins</strong> can
+change these settings.</p>
+
 <p><a href="{{ '/architecture/' | relative_url }}">→ See how the data flows from GitLab/Jira into these metrics</a></p>
 
 </article>
