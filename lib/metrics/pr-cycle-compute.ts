@@ -1,5 +1,6 @@
 // Pure PR (merge-request) cycle-time breakdown — no DB, unit-testable.
 import type { Metric } from "./flow-compute"
+import { DAY, median } from "./stats"
 
 export interface PrMrRow {
   firstCommitAt: Date | null
@@ -15,15 +16,7 @@ export interface PrCycleResult {
 }
 
 const WEEKS = 8
-const DAY = 864e5
 const HOUR = 36e5
-
-function median(nums: number[]): number {
-  if (!nums.length) return 0
-  const s = [...nums].sort((a, b) => a - b)
-  const mid = Math.floor(s.length / 2)
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2
-}
 
 /** Compact duration for the breakdown line (e.g. "1.2d", "3.4h", "20m"). */
 function compact(ms: number): string {

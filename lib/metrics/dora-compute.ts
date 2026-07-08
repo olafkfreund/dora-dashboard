@@ -1,4 +1,5 @@
 // Pure DORA computation (no DB / no server-only) — unit-testable.
+import { DAY, median, trendOf } from "./stats"
 
 export interface DoraMetric {
   value: string
@@ -82,25 +83,7 @@ function safeRegExp(pattern: string | null | undefined): RegExp | null {
 export const WEEKS = 8
 const SUCCESS = "success"
 const FAILED = "failed"
-const DAY = 864e5
 const HOUR = 36e5
-
-function trendOf(history: number[]): "up" | "down" | "flat" {
-  const nz = history.filter((h) => h > 0)
-  if (nz.length < 2) return "flat"
-  const last = nz[nz.length - 1]
-  const prev = nz[nz.length - 2]
-  if (last > prev) return "up"
-  if (last < prev) return "down"
-  return "flat"
-}
-
-function median(nums: number[]): number {
-  if (nums.length === 0) return 0
-  const s = [...nums].sort((a, b) => a - b)
-  const mid = Math.floor(s.length / 2)
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2
-}
 
 function fmtDuration(ms: number): string {
   if (ms <= 0) return "—"
