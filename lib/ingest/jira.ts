@@ -1,5 +1,5 @@
 import "server-only"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { db } from "@/db"
 import { jiraIssues, jiraTransitions, jiraSprints, syncState, integrations } from "@/db/schema"
 import {
@@ -98,6 +98,8 @@ async function syncIssues(cfg: JiraConfig, fieldIds: JiraFieldIds): Promise<numb
   }
 
   const issues = await searchIssues(cfg, jql, fields)
+  const issueRows: (typeof jiraIssues.$inferInsert)[] = []
+  const transitionRows: (typeof jiraTransitions.$inferInsert)[] = []
   for (const issue of issues) {
     const f = issue.fields
     const status = (f.status as { name?: string; statusCategory?: { name?: string } }) ?? {}
@@ -108,55 +110,67 @@ async function syncIssues(cfg: JiraConfig, fieldIds: JiraFieldIds): Promise<numb
     const parentKey = (f.parent as { key?: string })?.key ?? null
     const storyPoints = storyPointsOf(f)
 
+    issueRows.push({
+      id: issue.key,
+      projectKey: issue.key.split("-")[0],
+      summary,
+      issueType: (f.issuetype as { name?: string })?.name ?? null,
+      status: status.name ?? null,
+      statusCategory: status.statusCategory?.name ?? null,
+      storyPoints,
+      sprintId: fieldIds.sprint ? sprintIdFromField(f[fieldIds.sprint]) : null,
+      programIncrement,
+      parentKey,
+      createdAt,
+      updatedAt: toDate(f.updated),
+      inProgressAt,
+      resolvedAt: toDate(f.resolutiondate),
+      blockedSeconds,
+      labels: (f.labels as string[]) ?? [],
+    })
+    for (let i = 0; i < transitions.length; i++) {
+      const t = transitions[i]
+      transitionRows.push({ id: `${issue.key}:${i}`, issueKey: issue.key, fromStatus: t.from, toStatus: t.to, at: t.at })
+    }
+  }
+
+  // Bulk upsert in chunks — a full-window sync is thousands of issues.
+  const chunk = <T>(arr: T[], n: number): T[][] => {
+    const out: T[][] = []
+    for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n))
+    return out
+  }
+  for (const c of chunk(issueRows, 500)) {
     await db
       .insert(jiraIssues)
-      .values({
-        id: issue.key,
-        projectKey: issue.key.split("-")[0],
-        summary,
-        issueType: (f.issuetype as { name?: string })?.name ?? null,
-        status: status.name ?? null,
-        statusCategory: status.statusCategory?.name ?? null,
-        storyPoints,
-        sprintId: fieldIds.sprint ? sprintIdFromField(f[fieldIds.sprint]) : null,
-        programIncrement,
-        parentKey,
-        createdAt,
-        updatedAt: toDate(f.updated),
-        inProgressAt,
-        resolvedAt: toDate(f.resolutiondate),
-        blockedSeconds,
-        labels: (f.labels as string[]) ?? [],
-      })
+      .values(c)
       .onConflictDoUpdate({
         target: jiraIssues.id,
         set: {
-          summary,
-          status: status.name ?? null,
-          statusCategory: status.statusCategory?.name ?? null,
-          storyPoints,
-          sprintId: fieldIds.sprint ? sprintIdFromField(f[fieldIds.sprint]) : null,
-          programIncrement,
-          parentKey,
-          updatedAt: toDate(f.updated),
-          inProgressAt,
-          resolvedAt: toDate(f.resolutiondate),
-          blockedSeconds,
-          labels: (f.labels as string[]) ?? [],
-          ingestedAt: new Date(),
+          summary: sql`excluded.summary`,
+          status: sql`excluded.status`,
+          statusCategory: sql`excluded."statusCategory"`,
+          storyPoints: sql`excluded."storyPoints"`,
+          sprintId: sql`excluded."sprintId"`,
+          programIncrement: sql`excluded."programIncrement"`,
+          parentKey: sql`excluded."parentKey"`,
+          updatedAt: sql`excluded."updatedAt"`,
+          inProgressAt: sql`excluded."inProgressAt"`,
+          resolvedAt: sql`excluded."resolvedAt"`,
+          blockedSeconds: sql`excluded."blockedSeconds"`,
+          labels: sql`excluded.labels`,
+          ingestedAt: sql`now()`,
         },
       })
-
-    for (let i = 0; i < transitions.length; i++) {
-      const t = transitions[i]
-      await db
-        .insert(jiraTransitions)
-        .values({ id: `${issue.key}:${i}`, issueKey: issue.key, fromStatus: t.from, toStatus: t.to, at: t.at })
-        .onConflictDoUpdate({
-          target: jiraTransitions.id,
-          set: { fromStatus: t.from, toStatus: t.to, at: t.at },
-        })
-    }
+  }
+  for (const c of chunk(transitionRows, 1000)) {
+    await db
+      .insert(jiraTransitions)
+      .values(c)
+      .onConflictDoUpdate({
+        target: jiraTransitions.id,
+        set: { fromStatus: sql`excluded."fromStatus"`, toStatus: sql`excluded."toStatus"`, at: sql`excluded.at` },
+      })
   }
 
   await db

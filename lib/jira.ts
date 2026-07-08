@@ -89,7 +89,7 @@ export interface JiraIssueRaw {
  * cursor-paginated via `nextPageToken` and does NOT return a `total`; iterate until
  * `nextPageToken` is absent (or `isLast`).
  */
-export async function searchIssues(cfg: JiraConfig, jql: string, fields: string, maxIssues = 2000): Promise<JiraIssueRaw[]> {
+export async function searchIssues(cfg: JiraConfig, jql: string, fields: string, maxIssues = 50000): Promise<JiraIssueRaw[]> {
   const out: JiraIssueRaw[] = []
   const maxResults = 100
   let nextPageToken: string | undefined

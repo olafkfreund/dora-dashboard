@@ -62,15 +62,22 @@ export async function computeJiraMetrics(
     sprints = allSprints.filter((s) => teamSprintIds.has(s.id))
     transitions = allTransitions.filter((t) => t.issueKey != null && keySet.has(t.issueKey.split("-")[0]))
   }
+  // Exclude Sub-tasks from flow/velocity/allocation — they are implementation
+  // details under Stories, not delivery units, and would double-count.
+  const isSubtask = (t: string | null) => /sub-?task/i.test(t ?? "")
+  const flowIssues = issues.filter((i) => !isSubtask(i.issueType))
+  const flowKeys = new Set(flowIssues.map((i) => i.key))
+  const flowTransitions = transitions.filter((t) => t.issueKey != null && flowKeys.has(t.issueKey))
+
   const qualityRows = issues.map((i) => ({ issueType: i.issueType, labels: (i.labels as string[] | null) ?? null }))
-  const allocRows = issues.map((i) => ({
+  const allocRows = flowIssues.map((i) => ({
     issueType: i.issueType,
     labels: (i.labels as string[] | null) ?? null,
     storyPoints: i.storyPoints,
   }))
   return {
-    flow: computeFlow(issues, now, transitions),
-    velocity: computeVelocity(sprints, issues),
+    flow: computeFlow(flowIssues, now, flowTransitions),
+    velocity: computeVelocity(sprints, flowIssues),
     quality: computeQuality(qualityRows),
     allocation: computeAllocation(allocRows),
     feature: computeFeatureCycle(issues),
