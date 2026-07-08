@@ -63,6 +63,11 @@ export async function saveMetricConfigAction(_prev: ActionState, formData: FormD
       .split(/[\n,]/)
       .map((s) => s.trim())
       .filter(Boolean),
+    // Statuses excluded from Work Item Age (parked/abandoned work).
+    ageExcludedStatuses: String(formData.get("ageExcludedStatuses") ?? "")
+      .split(/[\n,]/)
+      .map((s) => s.trim())
+      .filter(Boolean),
   }
 
   // Validate the fully-merged config (catches NaN band values, out-of-range window, etc.).

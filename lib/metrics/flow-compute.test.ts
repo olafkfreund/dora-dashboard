@@ -55,6 +55,16 @@ describe("computeFlow", () => {
     expect(computeFlow(rows, NOW, transitions, ["Blocked"]).blockedTime?.value).toBe("20%")
   })
 
+  it("work item age counts only currently In-Progress items, minus excluded statuses", () => {
+    const rows = [
+      issue({ statusCategory: "In Progress", status: "In Dev", inProgressAt: d(10) }), // counts (10d)
+      issue({ statusCategory: "To Do", status: "Ready for Dev", inProgressAt: d(100) }), // backlog — excluded
+      issue({ statusCategory: "In Progress", status: "Deferred", inProgressAt: d(200) }), // parked — excluded by list
+    ]
+    // Only the first item (10d) counts → mean 10.0 days.
+    expect(computeFlow(rows, NOW, [], [], ["Deferred"]).workItemAge?.value).toBe("10.0 days")
+  })
+
   it("blocked time denominator excludes never-blocked items", () => {
     // Blocked item: lifetime 10d, blocked 2d. A never-blocked item shouldn't dilute it.
     const rows = [

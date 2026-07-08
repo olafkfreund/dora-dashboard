@@ -17,6 +17,7 @@ function mergePartials(a: PartialMetricConfig, b: PartialMetricConfig): PartialM
     targets: { ...(a.targets ?? {}), ...(b.targets ?? {}) },
     hiddenMetrics: b.hiddenMetrics ?? a.hiddenMetrics,
     blockedStatuses: b.blockedStatuses ?? a.blockedStatuses,
+    ageExcludedStatuses: b.ageExcludedStatuses ?? a.ageExcludedStatuses,
   }
 }
 

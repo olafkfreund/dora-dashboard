@@ -26,6 +26,7 @@ export async function computeJiraMetrics(
         summary: jiraIssues.summary,
         issueType: jiraIssues.issueType,
         labels: jiraIssues.labels,
+        status: jiraIssues.status,
         statusCategory: jiraIssues.statusCategory,
         storyPoints: jiraIssues.storyPoints,
         sprintId: jiraIssues.sprintId,
@@ -80,7 +81,7 @@ export async function computeJiraMetrics(
   }))
   const mc = await getMetricConfig(filter?.slug)
   return {
-    flow: computeFlow(flowIssues, now, flowTransitions, mc.blockedStatuses),
+    flow: computeFlow(flowIssues, now, flowTransitions, mc.blockedStatuses, mc.ageExcludedStatuses),
     velocity: computeVelocity(sprints, flowIssues),
     quality: computeQuality(qualityRows),
     allocation: computeAllocation(allocRows),

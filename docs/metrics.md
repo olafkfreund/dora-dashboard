@@ -101,7 +101,7 @@ allocation (they sit under Stories and would double-count).</p>
 <thead><tr><th>Metric</th><th>Jira source (field / signal)</th><th>Scope</th><th>Formula</th></tr></thead>
 <tbody>
 <tr><td>Cycle Time</td><td>changelog → <code>inProgressAt</code>, <code>resolvedAt</code></td><td>Done items, no sub-tasks</td><td>median(resolved − in-progress)</td></tr>
-<tr><td>Work Item Age</td><td>changelog → <code>inProgressAt</code></td><td>open in-progress, no sub-tasks</td><td>mean(now − in-progress)</td></tr>
+<tr><td>Work Item Age</td><td>changelog → <code>inProgressAt</code></td><td>currently In Progress, no sub-tasks / parked</td><td>mean(now − in-progress)</td></tr>
 <tr><td>Blocked Time</td><td>changelog → time in a Blocked/On-Hold/Impediment status</td><td>items ever blocked</td><td>Σ blocked ÷ Σ lifetime of ever-blocked items × 100</td></tr>
 <tr><td>Feature Cycle Time</td><td>issue type <em>Feature</em> + <code>inProgressAt</code>/<code>resolvedAt</code></td><td>resolved Features</td><td>median(resolved − started)</td></tr>
 <tr><td>Average Velocity</td><td>Story Points (<code>cf10002</code>) + Program Increment (<code>cf10001</code>) + status</td><td>Done, no sub-tasks</td><td>mean(completed points) per PI (P1–P6)</td></tr>
@@ -215,7 +215,10 @@ points at a slow stage (e.g. testing hand-off).</div>
 <p class="src">Source: Jira open, in-progress items</p>
 <p><strong>What it measures.</strong> The average age of items currently in progress — a
 <em>leading</em> indicator of work at risk of stalling.</p>
-<code class="formula">mean(now − in_progress_at) for items still open</code>
+<code class="formula">mean(now − work-started) for items currently In Progress</code>
+<p>Only items whose current status is in the <em>In Progress</em> category count — items pushed back
+to the backlog don't accrue age. Parked/abandoned statuses (Deferred, Future releases, TO&nbsp;BE&nbsp;DELETED)
+can be excluded in <strong>Settings → Metrics</strong>.</p>
 <div class="scenario"><strong>Real-life:</strong> If three tickets have been “In Progress” for
 10+ days, average age climbs — a prompt to unblock them in the next stand-up before the sprint
 misses.</div>

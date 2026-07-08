@@ -184,7 +184,7 @@ const base: Omit<Metric, "accent" | "sourceDetail">[] = [
     unit: "days",
     definition:
       "Average age of currently open, in-progress work items. A leading indicator of items at risk of stalling.",
-    formula: "mean(now − in_progress_at) for items still open",
+    formula: "mean(now − work-started) for items currently In Progress (excludes backlog/parked statuses)",
     insight:
       "Rising — 3 items have been in progress for over 10 days and should be reviewed in the next standup.",
     history: [3.8, 3.9, 4.0, 4.2, 4.3, 4.5, 4.6, 4.7],

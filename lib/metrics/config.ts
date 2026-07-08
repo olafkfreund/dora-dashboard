@@ -45,6 +45,9 @@ export const metricConfigSchema = z.object({
   // Exact Jira status names that count as "blocked" for Blocked Time. Empty = auto-detect
   // by name (block/on hold/impediment) using the value stored at ingest.
   blockedStatuses: z.array(z.string()),
+  // Jira status names excluded from Work Item Age (parked/abandoned work, e.g. Deferred,
+  // Future releases, TO BE DELETED). Age already counts only In-Progress-category items.
+  ageExcludedStatuses: z.array(z.string()),
 })
 
 export type MetricConfig = z.infer<typeof metricConfigSchema>
@@ -68,6 +71,7 @@ export const DEFAULT_CONFIG: MetricConfig = {
   targets: {},
   hiddenMetrics: [],
   blockedStatuses: [],
+  ageExcludedStatuses: [],
 }
 
 // A partial config as stored in the DB (any subset of keys, any depth).
@@ -79,6 +83,7 @@ export type PartialMetricConfig = {
   targets?: Record<string, number>
   hiddenMetrics?: string[]
   blockedStatuses?: string[]
+  ageExcludedStatuses?: string[]
 }
 
 /** Depth-aware merge of a partial config over DEFAULT_CONFIG (missing keys fall back). */
@@ -95,6 +100,7 @@ export function mergeConfig(p: PartialMetricConfig): MetricConfig {
     targets: { ...DEFAULT_CONFIG.targets, ...(p.targets ?? {}) },
     hiddenMetrics: p.hiddenMetrics ?? DEFAULT_CONFIG.hiddenMetrics,
     blockedStatuses: p.blockedStatuses ?? DEFAULT_CONFIG.blockedStatuses,
+    ageExcludedStatuses: p.ageExcludedStatuses ?? DEFAULT_CONFIG.ageExcludedStatuses,
   }
 }
 

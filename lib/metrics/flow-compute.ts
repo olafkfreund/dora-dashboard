@@ -14,6 +14,7 @@ export interface Metric {
 
 export interface FlowIssueRow {
   statusCategory: string | null
+  status?: string | null
   storyPoints: number | null
   sprintId: number | null
   createdAt: Date | null
@@ -144,7 +145,7 @@ function blockedSecondsByIssue(issues: FlowIssueRow[], transitions: TransitionRo
 }
 
 /** Cycle Time, Work Item Age, Blocked Time from Jira issues. */
-export function computeFlow(issues: FlowIssueRow[], now = new Date(), transitions: TransitionRow[] = [], blockedStatuses: string[] = []): FlowResult {
+export function computeFlow(issues: FlowIssueRow[], now = new Date(), transitions: TransitionRow[] = [], blockedStatuses: string[] = [], ageExcludedStatuses: string[] = []): FlowResult {
   if (!issues.length) return { hasData: false }
   const since = new Date(now.getTime() - WEEKS * 7 * DAY)
   const weekIdx = (d: Date) => Math.min(WEEKS - 1, Math.max(0, Math.floor((d.getTime() - since.getTime()) / (7 * DAY))))
@@ -162,10 +163,13 @@ export function computeFlow(issues: FlowIssueRow[], now = new Date(), transition
     }
   }
 
-  // Work Item Age — still-open, in-progress items: now − started (snapshot).
+  // Work Item Age — items *currently* in an In-Progress status: now − started (snapshot).
+  // Only the "In Progress" category counts (items pushed back to backlog don't age), and
+  // admin-excluded statuses (parked/abandoned: Deferred, Future releases, TO BE DELETED) drop out.
+  const ageExcluded = new Set(ageExcludedStatuses)
   const ages: number[] = []
   for (const i of issues) {
-    if (!isDone(i.statusCategory) && i.inProgressAt) {
+    if (i.statusCategory === "In Progress" && i.inProgressAt && !ageExcluded.has(i.status ?? "")) {
       ages.push((now.getTime() - i.inProgressAt.getTime()) / DAY)
     }
   }

@@ -103,6 +103,12 @@ export function MetricsPanel({
               placeholder="Blocked, Defect Blocked, On Hold"
             />
             <Field
+              label="Jira statuses excluded from Work Item Age (parked/abandoned work; comma-separated)"
+              name="ageExcludedStatuses"
+              defaultValue={config.ageExcludedStatuses.join(", ")}
+              placeholder="Deferred, Future releases, Not Required - TO BE DELETED"
+            />
+            <Field
               label="Rolling window (weeks)"
               name="windowWeeks"
               type="number"
