@@ -146,14 +146,19 @@ export function computeFlow(issues: FlowIssueRow[], now = new Date(), transition
     }
   }
 
-  // Blocked Time — share of item lifetime spent blocked.
+  // Blocked Time — share of blocked items' own lifetime spent blocked.
   let blockedSecs = 0
-  let lifetimeSecs = 0
+  let lifetimeSecs = 0 // all items (context only)
+  let blockedLifetimeSecs = 0 // only items that were ever blocked (the denominator)
   for (const i of issues) {
     if (!i.createdAt) continue
     const end = i.resolvedAt ?? now
-    lifetimeSecs += Math.max(0, (end.getTime() - i.createdAt.getTime()) / 1000)
-    blockedSecs += i.blockedSeconds ?? 0
+    const life = Math.max(0, (end.getTime() - i.createdAt.getTime()) / 1000)
+    lifetimeSecs += life
+    if ((i.blockedSeconds ?? 0) > 0) {
+      blockedSecs += i.blockedSeconds ?? 0
+      blockedLifetimeSecs += life
+    }
   }
 
   const result: FlowResult = { hasData: true }
@@ -193,23 +198,26 @@ export function computeFlow(issues: FlowIssueRow[], now = new Date(), transition
       },
     }
   }
-  if (lifetimeSecs > 0) {
-    const pct = Math.round((blockedSecs / lifetimeSecs) * 1000) / 10
-    const everBlocked = issues.filter((i) => (i.blockedSeconds ?? 0) > 0).length
+  const everBlocked = issues.filter((i) => (i.blockedSeconds ?? 0) > 0).length
+  if (everBlocked > 0 && blockedLifetimeSecs > 0) {
+    const pct = Math.round((blockedSecs / blockedLifetimeSecs) * 1000) / 10
     const blockedDays = blockedSecs / 86400
+    const dilutedPct = lifetimeSecs > 0 ? Math.round((blockedSecs / lifetimeSecs) * 1000) / 10 : 0
     result.blockedTime = {
       value: `${pct}%`,
-      sub: `of item lifetime`,
+      sub: `of blocked items' lifetime`,
       history: [],
       trend: "flat",
+      note: `Across the ${everBlocked} items that were ever blocked. As a share of all work it is ${dilutedPct}%.`,
       breakdown: {
         title: "Blocked-time detail",
         columns: ["Measure", "Value"],
         rows: [
           { label: "Issues ever blocked", values: [everBlocked] },
           { label: "Total blocked time", values: [`${blockedDays.toFixed(1)}d`] },
-          { label: "Avg per blocked issue", values: [everBlocked ? `${(blockedDays / everBlocked).toFixed(1)}d` : "—"] },
-          { label: "Total item lifetime", values: [`${(lifetimeSecs / 86400).toFixed(0)}d`] },
+          { label: "Avg per blocked issue", values: [`${(blockedDays / everBlocked).toFixed(1)}d`] },
+          { label: "Blocked items' lifetime", values: [`${(blockedLifetimeSecs / 86400).toFixed(0)}d`] },
+          { label: "All items' lifetime", values: [`${(lifetimeSecs / 86400).toFixed(0)}d`] },
         ],
       },
     }

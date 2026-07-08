@@ -202,8 +202,8 @@ const base: Omit<Metric, "accent" | "sourceDetail">[] = [
     target: "< 10%",
     unit: "%",
     definition:
-      "Percentage of a work item's lifetime spent in a blocked/waiting state. High values indicate dependency or hand-off friction.",
-    formula: "sum(time in blocked status) / sum(total item lifetime) × 100",
+      "Of the items that were ever blocked, the share of their lifetime spent in a blocked/waiting state. High values indicate dependency or hand-off friction.",
+    formula: "sum(time blocked) ÷ sum(lifetime of items that were ever blocked) × 100",
     insight:
       "Slowly improving. Most blocked time is waiting on external API sign-off.",
     history: [18, 17, 16, 15, 14, 13, 13, 12],
@@ -370,7 +370,7 @@ const SOURCE_DETAIL: Record<string, string> = {
   mttr: "GitLab — median time from a failed deployment to the next successful deployment of the same project (deploy-recovery proxy).",
   "cycle-time": "Jira — median of (resolved − work-started) across issues completed in the window, from status-change history.",
   "work-item-age": "Jira — mean age of currently open, in-progress issues (now − work-started), from status history.",
-  "blocked-time": "Jira — total time issues spent in a blocked/impediment status, as a share of total item lifetime.",
+  "blocked-time": "Jira — time issues spent in a blocked/impediment status, as a share of the lifetime of the items that were ever blocked.",
   "delivery-predictability": "Jira — completed vs committed story points per Program Increment (P1–P6).",
   "average-velocity": "Jira — mean completed story points per Program Increment (P1–P6); needs story-pointed issues.",
   "test-automation-coverage": "GitLab CI — mean of each project's latest pipeline coverage value.",

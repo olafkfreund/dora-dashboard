@@ -102,7 +102,7 @@ allocation (they sit under Stories and would double-count).</p>
 <tbody>
 <tr><td>Cycle Time</td><td>changelog → <code>inProgressAt</code>, <code>resolvedAt</code></td><td>Done items, no sub-tasks</td><td>median(resolved − in-progress)</td></tr>
 <tr><td>Work Item Age</td><td>changelog → <code>inProgressAt</code></td><td>open in-progress, no sub-tasks</td><td>mean(now − in-progress)</td></tr>
-<tr><td>Blocked Time</td><td>changelog → time in a Blocked/On-Hold/Impediment status</td><td>all items</td><td>Σ blocked ÷ Σ item-lifetime × 100</td></tr>
+<tr><td>Blocked Time</td><td>changelog → time in a Blocked/On-Hold/Impediment status</td><td>items ever blocked</td><td>Σ blocked ÷ Σ lifetime of ever-blocked items × 100</td></tr>
 <tr><td>Feature Cycle Time</td><td>issue type <em>Feature</em> + <code>inProgressAt</code>/<code>resolvedAt</code></td><td>resolved Features</td><td>median(resolved − started)</td></tr>
 <tr><td>Average Velocity</td><td>Story Points (<code>cf10002</code>) + Program Increment (<code>cf10001</code>) + status</td><td>Done, no sub-tasks</td><td>mean(completed points) per PI (P1–P6)</td></tr>
 <tr><td>Delivery Predictability</td><td>Story Points + Program Increment + status</td><td>no sub-tasks</td><td>completed ÷ committed points per PI; mean across PIs</td></tr>
@@ -224,11 +224,13 @@ misses.</div>
 <div class="metric-doc" markdown="0">
 <h3>Blocked Time <span class="tag-live">live</span></h3>
 <p class="src">Source: Jira blocked/waiting status</p>
-<p><strong>What it measures.</strong> The percentage of an item’s life spent blocked — dependency
-and hand-off friction.</p>
-<code class="formula">sum(time in blocked status) / sum(total item lifetime) × 100</code>
+<p><strong>What it measures.</strong> Of the items that were ever blocked, the share of their
+lifetime spent blocked — dependency and hand-off friction. Measuring only blocked items (not all
+work) keeps the number from being diluted; the detail view also shows it as a share of all work.</p>
+<code class="formula">sum(time blocked) ÷ sum(lifetime of items that were ever blocked) × 100</code>
 <div class="scenario"><strong>Real-life:</strong> Items waiting on an external API sign-off sit
-“Blocked” for days; if 12% of total lifetime is blocked, that dependency is your biggest drag.</div>
+“Blocked” for days; if those items spend 20% of their life blocked, that dependency is the drag to
+attack — even if it’s only ~1% of all work.</div>
 </div>
 
 <div class="metric-doc" markdown="0">

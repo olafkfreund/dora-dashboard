@@ -41,6 +41,16 @@ describe("computeFlow", () => {
     expect(computeFlow(rows, NOW).blockedTime?.value).toBe("10%")
   })
 
+  it("blocked time denominator excludes never-blocked items", () => {
+    // Blocked item: lifetime 10d, blocked 2d. A never-blocked item shouldn't dilute it.
+    const rows = [
+      issue({ createdAt: d(10), resolvedAt: NOW, statusCategory: "Done", blockedSeconds: (2 * DAY) / 1000 }),
+      issue({ createdAt: d(10), resolvedAt: NOW, statusCategory: "Done", blockedSeconds: 0 }),
+    ]
+    // 2d ÷ 10d (only the blocked item's lifetime) = 20%, not 2/20 = 10%
+    expect(computeFlow(rows, NOW).blockedTime?.value).toBe("20%")
+  })
+
   it("cycle time includes a time-in-stage breakdown from transitions", () => {
     const rows = [issue({ createdAt: d(10), inProgressAt: d(6), resolvedAt: d(2), statusCategory: "Done" })]
     const transitions = [
