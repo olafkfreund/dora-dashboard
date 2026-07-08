@@ -15,7 +15,7 @@ import type { ActionState } from "@/lib/action-state"
 
 const csv = (fd: FormData, name: string): string[] =>
   String(fd.get(name) ?? "")
-    .split(",")
+    .split(/[\n,]/)
     .map((s) => s.trim())
     .filter(Boolean)
 
@@ -58,16 +58,9 @@ export async function saveMetricConfigAction(_prev: ActionState, formData: FormD
       const visible = new Set(formData.getAll("visibleCards").map(String))
       return allMetrics.map((m) => m.id).filter((id) => !visible.has(id))
     })(),
-    // Explicit blocked-status list (comma/newline separated); empty = auto-detect by name.
-    blockedStatuses: String(formData.get("blockedStatuses") ?? "")
-      .split(/[\n,]/)
-      .map((s) => s.trim())
-      .filter(Boolean),
-    // Statuses excluded from Work Item Age (parked/abandoned work).
-    ageExcludedStatuses: String(formData.get("ageExcludedStatuses") ?? "")
-      .split(/[\n,]/)
-      .map((s) => s.trim())
-      .filter(Boolean),
+    // Empty = auto-detect by name (blocked) / no exclusions (age).
+    blockedStatuses: csv(formData, "blockedStatuses"),
+    ageExcludedStatuses: csv(formData, "ageExcludedStatuses"),
   }
 
   // Validate the fully-merged config (catches NaN band values, out-of-range window, etc.).
