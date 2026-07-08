@@ -132,3 +132,9 @@ digest:
   schedule: "0 8 * * 1" # Mondays 08:00 UTC
   secret: "" # generated & persisted in the release Secret if empty
   image: "curlimages/curl:8.10.1"
+
+# Metric-history snapshots — captures each metric's value on a schedule so the
+# dashboard trend charts have real history. Reuses DIGEST_SECRET + digest.image.
+snapshot:
+  enabled: true
+  schedule: "0 */6 * * *" # every 6 hours

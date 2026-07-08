@@ -7,6 +7,7 @@ import { computeJiraMetrics } from "@/lib/metrics/jira-metrics"
 import { computeCoverageMetric } from "@/lib/metrics/coverage"
 import { computePrCycleMetric } from "@/lib/metrics/pr-cycle"
 import { getMetricConfig } from "@/lib/metrics/config-store"
+import { getSnapshotSeries } from "@/lib/metrics/snapshot"
 import { resolveTeamFilter, listTeams } from "@/lib/teams/store"
 import { TeamSelector } from "@/components/team-selector"
 
@@ -77,6 +78,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
     if (pr.prCycleTime) overrides["pr-cycle-time"] = pr.prCycleTime
   } catch {
     // MR data not ready — keep sample
+  }
+  // Real trend history from stored snapshots (once ≥2 captures exist for this scope).
+  try {
+    const series = await getSnapshotSeries(teamSlug)
+    for (const [id, hist] of series) {
+      if (overrides[id] && hist.length >= 2) overrides[id].history = hist
+    }
+  } catch {
+    // snapshots not ready — keep computed history
   }
   const live = Object.keys(overrides).length > 0
   const metricConfig = await getMetricConfig(teamSlug)

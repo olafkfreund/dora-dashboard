@@ -132,6 +132,15 @@ export const digestConfig = pgTable("digest_config", {
   updatedById: text("updatedById"),
 })
 
+// --- Metric history snapshots. One numeric value per metric per capture, for trend charts. ---
+export const metricSnapshots = pgTable("metric_snapshot", {
+  id: text("id").primaryKey(), // `${metricId}|${teamSlug|''}|${capturedAtMs}`
+  metricId: text("metricId").notNull(),
+  teamSlug: text("teamSlug"), // null = org / all teams
+  value: doublePrecision("value").notNull(),
+  capturedAt: timestamp("capturedAt", { mode: "date" }).notNull().defaultNow(),
+})
+
 // --- Teams (squads). A team = a set of GitLab projects + Jira project keys. Audited. ---
 export const teams = pgTable("team", {
   slug: text("slug").primaryKey(),

@@ -99,6 +99,13 @@
       "when": 1783512850109,
       "tag": "0013_digest_config",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1783521071662,
+      "tag": "0014_metric_snapshot",
+      "breakpoints": true
     }
   ]
 }

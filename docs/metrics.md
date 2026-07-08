@@ -39,6 +39,18 @@ fine-tuning the metrics.
 </div>
 
 <div class="note">
+<strong>Trend charts build from real history.</strong> Many metrics are <em>point-in-time</em>
+(e.g. Work Item Age is a snapshot of what's open now; Test Automation Coverage is the latest
+value) and therefore have no natural time series to plot. Rather than show fabricated trends, the
+portal <strong>captures every metric's value on a schedule</strong> (a snapshot CronJob, every
+6&nbsp;hours by default) into a <code>metric_snapshot</code> table, and the Charts/Modern views
+draw the <strong>real stored series</strong>. This means a card's trend line starts flat and
+<strong>fills in as history accumulates</strong> — so what you see is genuine change over time, not
+a synthetic curve. Snapshots are captured per team as well, so a team-filtered dashboard shows that
+team's own history.
+</div>
+
+<div class="note">
 <strong>Scheduled digest.</strong> Under <strong>Settings → Notifications</strong> you can have the
 portal send a recurring <strong>delivery digest</strong> — an <strong>email</strong> (with the PDF
 attached) or a <strong>Teams/Slack</strong> webhook message — summarising each metric's tier and the

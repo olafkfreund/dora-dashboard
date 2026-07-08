@@ -434,6 +434,14 @@ export default async function HelpPage() {
                 connected data; cards without it show sample values until that source is connected.
               </Note>
             </div>
+            <div className="mt-3">
+              <Note>
+                <strong>Trend charts.</strong> The bar/area charts draw from <strong>real captured
+                history</strong> — a snapshot job records every metric&apos;s value on a schedule (every
+                6h by default). Point-in-time metrics (Work Item Age, Coverage, …) start with a flat
+                line and fill in as history accumulates, so the trend reflects genuine change over time.
+              </Note>
+            </div>
           </Section>
 
           {/* At a glance */}

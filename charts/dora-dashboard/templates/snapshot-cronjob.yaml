@@ -1,0 +1,49 @@
+{{- if .Values.snapshot.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "dora.fullname" . }}-snapshot
+  labels:
+    {{- include "dora.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.snapshot.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 300
+      template:
+        metadata:
+          labels:
+            {{- include "dora.selectorLabels" . | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: snapshot
+              image: {{ .Values.digest.image | quote }}
+              command: ["sh", "-c"]
+              # Capture a metric-history snapshot via the shared secret.
+              args:
+                - >-
+                  curl -fsS -X POST
+                  -H "x-digest-secret: $DIGEST_SECRET"
+                  http://{{ include "dora.fullname" . }}:{{ .Values.service.port }}/api/metrics/snapshot
+              env:
+                - name: DIGEST_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "dora.secretName" . }}
+                      key: DIGEST_SECRET
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                runAsNonRoot: true
+                capabilities:
+                  drop: ["ALL"]
+{{- end }}
