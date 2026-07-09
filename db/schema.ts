@@ -219,8 +219,10 @@ export const jiraIssues = pgTable("jira_issue", {
   statusCategory: text("statusCategory"), // "To Do" | "In Progress" | "Done"
   storyPoints: doublePrecision("storyPoints"),
   sprintId: integer("sprintId"),
-  // SAFe Program Increment (e.g. "PI5") and the parent Feature key (e.g. "DEMO-4954").
-  programIncrement: text("programIncrement"),
+  // SAFe Program Increments (multi-value, e.g. ["PI3","PI5"]) and the parent Feature
+  // key (e.g. "DEMO-4954"). PI is a multi-select in Jira — an issue can belong to
+  // several increments, and each membership is counted separately (matches Jira/board).
+  programIncrement: text("programIncrement").array(),
   parentKey: text("parentKey"),
   // Defect fields: Root Cause Analysis + Environment Type (option values).
   rootCause: text("rootCause"),

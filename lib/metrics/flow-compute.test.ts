@@ -18,13 +18,25 @@ describe("computeFlow", () => {
     expect(computeFlow([], NOW).hasData).toBe(false)
   })
 
-  it("cycle time = median(resolved − started)", () => {
+  it("cycle time = median(resolved − created)", () => {
     const rows = [
-      issue({ statusCategory: "Done", inProgressAt: d(5), resolvedAt: d(3) }), // 2d
-      issue({ statusCategory: "Done", inProgressAt: d(10), resolvedAt: d(6) }), // 4d
-      issue({ statusCategory: "Done", inProgressAt: d(9), resolvedAt: d(7) }), // 2d
+      issue({ statusCategory: "Done", createdAt: d(5), resolvedAt: d(3) }), // 2d
+      issue({ statusCategory: "Done", createdAt: d(10), resolvedAt: d(6) }), // 4d
+      issue({ statusCategory: "Done", createdAt: d(9), resolvedAt: d(7) }), // 2d
     ]
     expect(computeFlow(rows, NOW).cycleTime?.value).toBe("2.0 days") // median of [2,2,4]
+  })
+
+  it("cycle time per PI counts each issue in every increment it belongs to", () => {
+    const rows = [
+      issue({ statusCategory: "Done", createdAt: d(10), resolvedAt: d(6), programIncrement: ["PI3", "PI5"] }), // 4d in PI3 & PI5
+      issue({ statusCategory: "Done", createdAt: d(8), resolvedAt: d(6), programIncrement: ["PI3"] }), // 2d in PI3
+    ]
+    const bd = computeFlow(rows, NOW).cycleTime?.breakdown
+    const pi3 = bd?.rows.find((r) => r.label === "PI3")
+    const pi5 = bd?.rows.find((r) => r.label === "PI5")
+    expect(pi3?.values[0]).toBe(2) // both issues count in PI3
+    expect(pi5?.values[0]).toBe(1) // one issue counts in PI5
   })
 
   it("work item age = mean(now − started) for open items", () => {

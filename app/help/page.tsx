@@ -494,7 +494,7 @@ export default async function HelpPage() {
             <p className="mb-2 mt-5 text-sm font-medium">Flow, Velocity &amp; Quality — Jira</p>
             <KV
               rows={[
-                ["Cycle Time", "median(resolved − work-started) for completed items (excludes sub-tasks)."],
+                ["Cycle Time", <>median(resolved − <strong>created</strong>) for completed items (excludes sub-tasks). Drill-down breaks it down per <strong>Programme Increment</strong>, counting each issue in every PI it belongs to.</>],
                 ["Work Item Age", "mean(now − work-started) for open in-progress items."],
                 ["Blocked Time", <>time in a blocked status ÷ lifetime of the items that were <em>ever</em> blocked (blocked statuses configurable).</>],
                 ["Feature Cycle Time", <>median(resolved − started) across <strong>Features</strong> (parent issue type); breakdown by Program Increment.</>],

@@ -100,12 +100,12 @@ allocation (they sit under Stories and would double-count).</p>
 <table>
 <thead><tr><th>Metric</th><th>Jira source (field / signal)</th><th>Scope</th><th>Formula</th></tr></thead>
 <tbody>
-<tr><td>Cycle Time</td><td>changelog → <code>inProgressAt</code>, <code>resolvedAt</code></td><td>Done items, no sub-tasks</td><td>median(resolved − in-progress)</td></tr>
+<tr><td>Cycle Time</td><td><code>createdAt</code>, <code>resolvedAt</code></td><td>Done items, no sub-tasks</td><td>median(resolved − created); per-PI drill-down counts each issue in every PI it belongs to</td></tr>
 <tr><td>Work Item Age</td><td>changelog → <code>inProgressAt</code></td><td>currently In Progress, no sub-tasks / parked</td><td>mean(now − in-progress)</td></tr>
 <tr><td>Blocked Time</td><td>changelog → time in a Blocked/On-Hold/Impediment status</td><td>items ever blocked</td><td>Σ blocked ÷ Σ lifetime of ever-blocked items × 100</td></tr>
 <tr><td>Feature Cycle Time</td><td>issue type <em>Feature</em> + <code>inProgressAt</code>/<code>resolvedAt</code></td><td>resolved Features</td><td>median(resolved − started)</td></tr>
-<tr><td>Average Velocity</td><td>Story Points (<code>cf10002</code>) + Program Increment (<code>cf10001</code>) + status</td><td>Done, no sub-tasks</td><td>mean(completed points) per PI (P1–P6)</td></tr>
-<tr><td>Delivery Predictability</td><td>Story Points + Program Increment + status</td><td>no sub-tasks</td><td>completed ÷ committed points per PI; mean across PIs</td></tr>
+<tr><td>Average Velocity</td><td>Story Points (<code>cf10002</code>) + Program Increment (<code>cf10001</code>, multi-value) + status</td><td>Done, no sub-tasks</td><td>mean(completed points) per PI (P1–P6); an issue in several PIs counts toward each</td></tr>
+<tr><td>Delivery Predictability</td><td>Story Points + Program Increment (multi-value) + status</td><td>no sub-tasks</td><td>completed ÷ committed points per PI; mean across PIs</td></tr>
 <tr><td>Investment Allocation</td><td>issue type + labels, weighted by Story Points</td><td>no sub-tasks</td><td>points per category ÷ total × 100 (Feature/KTLO/Debt/Support)</td></tr>
 <tr><td>Defect Escape Rate</td><td>Environment Type (<code>cf10005</code>)</td><td>Bug/Incident with an environment</td><td>Production ÷ all-with-environment × 100</td></tr>
 <tr><td>Defect Root Cause</td><td>Root Cause Analysis (<code>cf10004</code>)</td><td>Bug/Incident, triaged</td><td>(Requirements + Design) ÷ triaged × 100</td></tr>
@@ -195,19 +195,28 @@ seconds, this reads near-zero. For true incident MTTR, record incidents in GitLa
 also store each issue's <strong>story points</strong> (the classic Story-Points field),
 <strong>Program Increment</strong> (P1–P6), and parent <strong>Feature</strong>. Flow and velocity
 are computed at the delivery level — <strong>Sub-tasks are excluded</strong> (they are
-implementation details under Stories and would double-count). Velocity and Predictability are
-grouped by <strong>Program Increment</strong>, since the team plans in PIs rather than sprints.
+implementation details under Stories and would double-count). Velocity, Predictability and the
+per-PI Cycle Time breakdown are grouped by <strong>Program Increment</strong>, since the team plans
+in PIs rather than sprints. Program Increment is a <strong>multi-value field</strong>: an issue can
+belong to several increments, and each membership is counted separately — matching the delivery
+teams' own Jira board (an issue in PI3 and PI5 appears in both columns).
 </div>
 
 <div class="metric-doc" markdown="0">
 <h3>Cycle Time <span class="tag-live">live</span></h3>
-<p class="src">Source: Jira status transitions</p>
-<p><strong>What it measures.</strong> Time from when work actively <em>starts</em> on an item to
-when it is released — execution efficiency once work begins.</p>
-<code class="formula">median(resolved − work-started) for completed items (excludes sub-tasks)</code>
-<div class="scenario"><strong>Real-life:</strong> A story moves to <em>In Progress</em> on the
-3rd and is <em>Done/Released</em> on the 6th → 3-day cycle time. Rising cycle time usually
-points at a slow stage (e.g. testing hand-off).</div>
+<p class="src">Source: Jira issue created + resolution date</p>
+<p><strong>What it measures.</strong> Time from when an issue is <em>created</em> (the request lands)
+until it is <em>resolved</em> — request-to-done. This matches how the delivery teams and their Jira
+board report cycle time. The code-side GitLab DORA <em>Lead Time for Changes</em> (commit → deploy)
+is a separate metric.</p>
+<code class="formula">median(resolved − created) for completed items (excludes sub-tasks)</code>
+<p>The drill-down shows Cycle Time <strong>per Programme Increment</strong> across all history,
+counting each completed issue in every PI it belongs to — the same view the delivery teams pull
+directly from Jira.</p>
+<div class="scenario"><strong>Real-life:</strong> A story is raised on the 1st and marked
+<em>Done</em> on the 25th → 24-day cycle time. Earlier we measured only <em>In Progress → Done</em>
+(~12d); switching the clock to <em>created → resolved</em> reconciles the dashboard with the teams'
+own per-PI Jira report.</div>
 </div>
 
 <div class="metric-doc" markdown="0">

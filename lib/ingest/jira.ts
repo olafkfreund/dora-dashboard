@@ -98,13 +98,14 @@ async function syncIssues(cfg: JiraConfig, fieldIds: JiraFieldIds): Promise<numb
     const alt = fieldIds.storyPointsAlt ? Number(f[fieldIds.storyPointsAlt]) : NaN
     return Number.isFinite(alt) ? alt : null
   }
-  // Program Increment field is an array like ["PI5"] (or objects with value/name).
-  const piOf = (f: Record<string, unknown>): string | null => {
+  // Program Increment is a multi-select: ["PI3","PI5"] or objects with value/name.
+  // Keep EVERY value — an issue in PI3+PI5 counts toward both (matches Jira's board).
+  const pisOf = (f: Record<string, unknown>): string[] => {
     const v = fieldIds.programIncrement ? f[fieldIds.programIncrement] : null
-    const first = Array.isArray(v) ? v[0] : v
-    if (typeof first === "string") return first
-    if (first && typeof first === "object") return String((first as { value?: string; name?: string }).value ?? (first as { name?: string }).name ?? "") || null
-    return null
+    const arr = Array.isArray(v) ? v : v != null ? [v] : []
+    return arr
+      .map((x) => (typeof x === "string" ? x : x && typeof x === "object" ? String((x as { value?: string; name?: string }).value ?? (x as { name?: string }).name ?? "") : ""))
+      .filter(Boolean)
   }
 
   const issues = await searchIssues(cfg, jql, fields)
@@ -116,7 +117,7 @@ async function syncIssues(cfg: JiraConfig, fieldIds: JiraFieldIds): Promise<numb
     const createdAt = toDate(f.created)
     const { transitions, inProgressAt, blockedSeconds } = deriveFromChangelog(issue, createdAt)
     const summary = (f.summary as string) ?? null
-    const programIncrement = piOf(f)
+    const programIncrement = pisOf(f)
     const parentKey = (f.parent as { key?: string })?.key ?? null
     const storyPoints = storyPointsOf(f)
     const rootCause = optOf(f, fieldIds.rootCause)

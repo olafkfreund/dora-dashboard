@@ -26,7 +26,8 @@ export interface FlowIssueRow {
   key?: string | null
   summary?: string | null
   issueType?: string | null
-  programIncrement?: string | null
+  /** Every Program Increment the issue belongs to (multi-value). */
+  programIncrement?: string[] | null
 }
 
 export interface SprintRow {
@@ -87,6 +88,29 @@ function timeInStage(transitions: TransitionRow[]): MetricBreakdown | undefined 
   return { title: "Where items spend the most time (by total time in stage)", columns: ["Stage", "Median", "Items"], rows }
 }
 
+/** Per-PI cycle time (created → resolved) over all completed issues, counting each
+ *  issue in every Programme Increment it belongs to. Reproduces the delivery team's
+ *  Jira per-PI cycle-time view. Undefined when no real PIs are present. */
+function cycleByPi(issues: FlowIssueRow[]): MetricBreakdown | undefined {
+  const byPi = new Map<string, number[]>()
+  for (const i of issues) {
+    if (!isDone(i.statusCategory) || !i.resolvedAt || !i.createdAt) continue
+    const days = (i.resolvedAt.getTime() - i.createdAt.getTime()) / DAY
+    if (days < 0) continue
+    for (const pi of i.programIncrement ?? []) {
+      if (!/^PI\d+$/i.test(pi)) continue // real increments only (drop "test", "Future-PI", …)
+      const a = byPi.get(pi) ?? []
+      a.push(days)
+      byPi.set(pi, a)
+    }
+  }
+  if (!byPi.size) return undefined
+  const rows = [...byPi.entries()]
+    .sort((a, b) => piNum(a[0]) - piNum(b[0]))
+    .map(([pi, arr]) => ({ label: pi, values: [arr.length, `${median(arr).toFixed(1)}d`] }))
+  return { title: "Cycle time per Programme Increment (created → resolved, all history)", columns: ["PI", "Completed", "Median"], rows }
+}
+
 export interface FlowResult {
   hasData: boolean
   cycleTime?: Metric
@@ -135,12 +159,15 @@ export function computeFlow(issues: FlowIssueRow[], now = new Date(), transition
   const since = new Date(now.getTime() - WEEKS * 7 * DAY)
   const weekIdx = (d: Date) => Math.min(WEEKS - 1, Math.max(0, Math.floor((d.getTime() - since.getTime()) / (7 * DAY))))
 
-  // Cycle Time — completed items in window: resolved − started.
+  // Cycle Time — completed items in window: resolved − created.
+  // Clock starts at issue creation (request → done), matching how the delivery teams
+  // and their Jira board report cycle time; the GitLab DORA "Lead Time for Changes"
+  // (commit → deploy) is a separate, code-side metric.
   const cycleAll: number[] = []
   const cycleByWeek: number[][] = Array.from({ length: WEEKS }, () => [])
   for (const i of issues) {
-    if (isDone(i.statusCategory) && i.resolvedAt && i.inProgressAt && i.resolvedAt >= since) {
-      const days = (i.resolvedAt.getTime() - i.inProgressAt.getTime()) / DAY
+    if (isDone(i.statusCategory) && i.resolvedAt && i.createdAt && i.resolvedAt >= since) {
+      const days = (i.resolvedAt.getTime() - i.createdAt.getTime()) / DAY
       if (days >= 0) {
         cycleAll.push(days)
         cycleByWeek[weekIdx(i.resolvedAt)].push(days)
@@ -190,8 +217,10 @@ export function computeFlow(issues: FlowIssueRow[], now = new Date(), transition
       sub: `median · ${cycleAll.length} items`,
       history: hist,
       trend: trendOf(hist),
-      note: `Spread: p50 ${percentileDays(asc, 50).toFixed(1)}d · p75 ${percentileDays(asc, 75).toFixed(1)}d · p90 ${percentileDays(asc, 90).toFixed(1)}d. The stage table below shows where items spend the most time.`,
-      breakdown: timeInStage(transitions),
+      note: `Clock: issue created → resolved (request-to-done). Spread: p50 ${percentileDays(asc, 50).toFixed(1)}d · p75 ${percentileDays(asc, 75).toFixed(1)}d · p90 ${percentileDays(asc, 90).toFixed(1)}d. The table below is per Programme Increment across all history (an issue counts in every PI it belongs to).`,
+      // Per-PI table (full history) reproduces the delivery team's Jira cycle-time view;
+      // fall back to the where-time-is-spent stage table when PIs aren't in use.
+      breakdown: cycleByPi(issues) ?? timeInStage(transitions),
     }
   }
   if (ages.length) {
@@ -252,7 +281,7 @@ const piNum = (pi: string) => {
 function velocityByPi(issues: FlowIssueRow[], pis: string[], windowSize: number): VelocityResult {
   const perPi = pis
     .map((pi) => {
-      const inPi = issues.filter((i) => i.programIncrement === pi)
+      const inPi = issues.filter((i) => (i.programIncrement ?? []).includes(pi))
       const committed = inPi.reduce((a, i) => a + (i.storyPoints ?? 0), 0)
       const completed = inPi.filter((i) => isDone(i.statusCategory)).reduce((a, i) => a + (i.storyPoints ?? 0), 0)
       return { pi, committed, completed }
@@ -299,7 +328,7 @@ function velocityByPi(issues: FlowIssueRow[], pis: string[], windowSize: number)
 /** Average Velocity + Delivery Predictability. Prefers Program Increments; falls back to sprints. */
 export function computeVelocity(sprints: SprintRow[], issues: FlowIssueRow[], windowSize = 5): VelocityResult {
   // Use PI mode only when Program Increments actually carry story points.
-  const piVals = [...new Set(issues.filter((i) => (i.storyPoints ?? 0) > 0 && i.programIncrement).map((i) => i.programIncrement as string))]
+  const piVals = [...new Set(issues.filter((i) => (i.storyPoints ?? 0) > 0).flatMap((i) => i.programIncrement ?? []))]
   const piResult = piVals.length ? velocityByPi(issues, piVals, windowSize) : null
   if (piResult && piResult.hasData) return piResult
 
@@ -385,7 +414,7 @@ export function computeFeatureCycle(issues: FlowIssueRow[]): FeatureCycleResult 
     .map((i) => {
       const start = (i.inProgressAt ?? i.createdAt) as Date
       const days = (i.resolvedAt!.getTime() - start.getTime()) / DAY
-      return { summary: (i.summary ?? i.key ?? "").slice(0, 48), pi: i.programIncrement ?? "—", days }
+      return { summary: (i.summary ?? i.key ?? "").slice(0, 48), pi: i.programIncrement?.length ? i.programIncrement.join(", ") : "—", days }
     })
     .filter((r) => r.days > 0)
   if (!rows.length) return { hasData: false }
