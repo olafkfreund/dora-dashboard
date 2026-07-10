@@ -338,10 +338,14 @@ export function MetricExplorer({
   const active = items.find((m) => m.id === openId) ?? null
 
   // Deep-link support (?view=&metric=) takes precedence over persisted view.
+  // Intentional one-shot sync from the URL/localStorage (external state) that
+  // must run AFTER hydration to avoid a server/client mismatch — the documented
+  // valid use of an effect, so the set-state-in-effect rule is disabled here.
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const qView = params.get("view") as ViewMode | null
     if (qView && VIEWS.some((v) => v.id === qView)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setView(qView)
     } else {
       const saved = window.localStorage.getItem(STORAGE_KEY) as ViewMode | null

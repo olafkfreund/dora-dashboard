@@ -1,0 +1,32 @@
+# Code owners for DORA Dashboard.
+# These owners are requested for review automatically on any matching PR.
+# Order matters — the last matching pattern wins. Update handles/teams to match
+# your GitHub org (a team like @synechron/dora-maintainers is preferable to an
+# individual once the team exists).
+
+# Default owner for everything in the repo.
+*                       @Olaf-KrasickiFreund_syne
+
+# Metrics engine and formulas — the audit-sensitive core.
+/lib/metrics/           @Olaf-KrasickiFreund_syne
+/lib/ingest/            @Olaf-KrasickiFreund_syne
+
+# Auth, RBAC and middleware — security-sensitive.
+/auth.config.ts         @Olaf-KrasickiFreund_syne
+/middleware.ts          @Olaf-KrasickiFreund_syne
+/app/api/               @Olaf-KrasickiFreund_syne
+
+# Database schema and migrations — reviewed for data-model changes.
+/db/                    @Olaf-KrasickiFreund_syne
+
+# CI/CD, container and deployment surfaces.
+/.github/               @Olaf-KrasickiFreund_syne
+/charts/                @Olaf-KrasickiFreund_syne
+/deploy/                @Olaf-KrasickiFreund_syne
+/Dockerfile             @Olaf-KrasickiFreund_syne
+
+# Documentation & Backstage TechDocs.
+/docs/                  @Olaf-KrasickiFreund_syne
+/techdocs/              @Olaf-KrasickiFreund_syne
+/catalog-info.yaml      @Olaf-KrasickiFreund_syne
+/mkdocs.yml             @Olaf-KrasickiFreund_syne

@@ -1,0 +1,31 @@
+site_name: DORA Dashboard
+site_description: >-
+  Self-hosted delivery-intelligence portal for regulated environments — DORA-4
+  plus extended delivery/quality metrics from GitLab and Jira.
+
+# TechDocs source lives in ./techdocs so it does not collide with the Jekyll
+# GitHub Pages site under ./docs.
+docs_dir: techdocs
+
+nav:
+  - Overview: index.md
+  - Architecture: architecture.md
+  - Metrics catalogue: metrics.md
+  - Deployment: deployment.md
+  - Azure deployment: azure.md
+  - Configuration & integrations: configuration.md
+  - Security & compliance: security.md
+  - Development: development.md
+
+plugins:
+  - techdocs-core
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format

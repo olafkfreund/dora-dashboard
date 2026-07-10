@@ -23,6 +23,10 @@ env:
 
 jobs:
   build:
+    # Opt-in: set repository variable DEPLOY_ENABLED=true (and configure GHCR /
+    # AWS_ROLE_ARN / the EKS target) to enable the build+deploy pipeline. Until
+    # then this workflow is skipped so main stays green without cloud secrets.
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -32,7 +36,7 @@ jobs:
       tag: ${{ steps.vars.outputs.tag }}
       digest: ${{ steps.build.outputs.digest }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Compute image tag
         id: vars
@@ -109,7 +113,7 @@ jobs:
       id-token: write # for AWS OIDC
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
