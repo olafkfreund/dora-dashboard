@@ -49,3 +49,6 @@ result-*
 
 # TS build info
 *.tsbuildinfo
+
+# Local-only: contains real client data, never commit
+docs/metric-verification-questionnaire.md
