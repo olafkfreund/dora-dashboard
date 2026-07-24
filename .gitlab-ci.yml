@@ -1,0 +1,81 @@
+include:
+  - project: "riverstoneinternational/riva/pipeline-templates"
+    ref: v1.17.2
+    file:
+      - /templates/jobs/.buildah-azure-build.yaml
+
+stages:
+  - build
+  - deploy
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_MERGE_REQUEST_IID
+      variables:
+        PIPELINE_NAME: 'Merge Request - $CI_MERGE_REQUEST_TITLE'
+    - if: $CI_COMMIT_TAG
+      variables:
+        PIPELINE_NAME: 'Tag - $CI_COMMIT_TAG'
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+variables:
+  ACCESS_TOKEN: $group_token
+  DOCKER_API_VERSION: "1.44"
+  SEM_VER: $CI_COMMIT_TAG
+  IMAGE_NAME: $CI_REGISTRY_IMAGE
+  IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+  PROJECT_DIR: $CI_PROJECT_DIR
+  SUFFIX: "-snapshot"
+  DEPLOY_ENV: "dev"
+  DEPLOY_ENV_TAG:
+    value: "dev"
+    options: ["dev", "prod", "prod-like"]
+    description: "Deployment environment tag. Set to 'prod' for production deployments, otherwise defaults to 'dev'."
+  RELEASE: "dora-dashboard"
+  HELM_CHART: "charts/dora-dashboard"
+
+default:
+  interruptible: true
+  tags: [riva, riverstone, $DEPLOY_ENV]
+
+build_image:
+  stage: build
+  needs:
+    - job: get_token
+      artifacts: true
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      variables:
+        SUFFIX: ""
+    - if: '$CI_COMMIT_TAG != null'
+      variables:
+        IMAGE_TAG: "${SEM_VER}.${DEPLOY_ENV_TAG}"
+        SUFFIX: ""
+  before_script:
+    - sed -i "s|replace_with_VITE_APP_VERSION|${CI_COMMIT_TAG:-${CI_COMMIT_SHORT_SHA}}|g" ./Dockerfile
+    - cat "${RSML_CA_CERT}" > ./ca.crt
+    # Enable OIDC for Azure authentication (WorkloadIdentityCredential)
+    - mkdir -p /tmp/azure_oidc
+    - echo "${CI_JOB_JWT}" > /tmp/azure_oidc/token
+    - export AZURE_FEDERATED_TOKEN_FILE=/tmp/azure_oidc/token
+
+trigger_downstream_deploy:
+  stage: deploy
+  needs: [build_image]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
+      variables:
+        DEPLOY_ENVIRONMENT: dev
+        AUTO_APPLY: "true"
+  variables:
+    RELEASE: $RELEASE
+    HELM_CHART: $HELM_CHART
+    IMAGE_TAG: $IMAGE_TAG
+    IMAGE_NAME: $IMAGE_NAME
+    DEPLOY_ENV: $DEPLOY_ENV
+  trigger:
+    project: riverstoneinternational/riva/riva-infrastructure-application
+    strategy: depend
