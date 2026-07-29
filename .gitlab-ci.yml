@@ -42,15 +42,15 @@ default:
 
 build_image:
   stage: build
-  needs:
-    - job: get_token
-      artifacts: true
+  # needs:
+  #   - job: get_token
+  #     artifacts: true
   rules:
     - if: $CI_MERGE_REQUEST_IID
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       variables:
         SUFFIX: ""
-    - if: '$CI_COMMIT_TAG != null'
+    - if: $CI_COMMIT_TAG
       variables:
         IMAGE_TAG: "${SEM_VER}.${DEPLOY_ENV_TAG}"
         SUFFIX: ""
