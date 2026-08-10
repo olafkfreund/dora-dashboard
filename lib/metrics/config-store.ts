@@ -15,6 +15,7 @@ function mergePartials(a: PartialMetricConfig, b: PartialMetricConfig): PartialM
     mttrMode: b.mttrMode ?? a.mttrMode,
     bands: { ...(a.bands ?? {}), ...(b.bands ?? {}) },
     targets: { ...(a.targets ?? {}), ...(b.targets ?? {}) },
+    baselines: { ...(a.baselines ?? {}), ...(b.baselines ?? {}) },
     hiddenMetrics: b.hiddenMetrics ?? a.hiddenMetrics,
     blockedStatuses: b.blockedStatuses ?? a.blockedStatuses,
     ageExcludedStatuses: b.ageExcludedStatuses ?? a.ageExcludedStatuses,

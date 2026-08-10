@@ -19,6 +19,15 @@ const BAND_ROWS = [
   { id: "mttr", label: "Mean Time to Restore", unit: "hours", hint: "lower = better" },
 ] as const
 
+// KPI baseline panel rows (label only — values come from config.baselines). Kept local
+// to avoid importing the zod-backed config module into the client bundle.
+const BASELINE_ROWS = [
+  { id: "lead-time-for-changes", label: "Lead Time" },
+  { id: "cycle-time", label: "Cycle Time" },
+  { id: "delivery-predictability", label: "Delivery Predictability" },
+  { id: "work-item-age", label: "Work Item Age" },
+] as const
+
 export function MetricsPanel({
   config,
   teams = [],
@@ -159,6 +168,33 @@ export function MetricsPanel({
                       <Field label="Elite" name={`band:${row.id}:elite`} type="number" step="any" defaultValue={b.elite} />
                       <Field label="High" name={`band:${row.id}:high`} type="number" step="any" defaultValue={b.high} />
                       <Field label="Medium" name={`band:${row.id}:medium`} type="number" step="any" defaultValue={b.medium} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* KPI baseline & phased targets (static reference panel on the dashboard) */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold">KPI baselines &amp; targets</h3>
+            <p className="text-xs text-muted-foreground">
+              Free text (e.g. &ldquo;220 Days&rdquo;, &ldquo;&lt;150 Days&rdquo;, &ldquo;70%&rdquo;) shown in the dashboard&rsquo;s
+              &ldquo;KPI Baseline &amp; Targets&rdquo; panel. These are programme goalposts, not live values.
+            </p>
+            <div className="space-y-4">
+              {BASELINE_ROWS.map((row) => {
+                const bl = config.baselines[row.id]
+                return (
+                  <div key={row.id} className="rounded-lg border border-border p-3">
+                    <div className="mb-2 text-sm font-medium">{row.label}</div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <Field label="Baseline" name={`baseline:${row.id}:baseline`} defaultValue={bl?.baseline ?? ""} />
+                      <Field label="9 Weeks" name={`baseline:${row.id}:week9`} defaultValue={bl?.week9 ?? ""} />
+                      <Field label="12 Weeks" name={`baseline:${row.id}:week12`} defaultValue={bl?.week12 ?? ""} />
+                    </div>
+                    <div className="mt-3">
+                      <Field label="Definition" name={`baseline:${row.id}:note`} defaultValue={bl?.note ?? ""} />
                     </div>
                   </div>
                 )

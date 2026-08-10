@@ -20,6 +20,24 @@ const bandSchema = z.object({
 })
 export type Band = z.infer<typeof bandSchema>
 
+// Static KPI baseline + phased improvement targets. Free-text so values like
+// "<150 Days" / "70%" render verbatim (they're programme goalposts, not computed).
+const baselineSchema = z.object({
+  baseline: z.string(),
+  week9: z.string(),
+  week12: z.string(),
+  note: z.string(),
+})
+export type MetricBaseline = z.infer<typeof baselineSchema>
+
+// Metric ids shown in the "KPI Baseline & Targets" panel, in display order.
+export const BASELINE_METRIC_IDS = [
+  "lead-time-for-changes",
+  "cycle-time",
+  "delivery-predictability",
+  "work-item-age",
+] as const
+
 export const metricConfigSchema = z.object({
   deployment: z.object({
     // Environment allowlist; [] = match every environment (no filter).
@@ -40,6 +58,9 @@ export const metricConfigSchema = z.object({
   }),
   // Per-metric target values (units per metric); merged over the built-in targets.
   targets: z.record(z.string(), z.number()),
+  // Static KPI baseline + 9-week / 12-week improvement targets (per metric id),
+  // shown in the "KPI Baseline & Targets" panel.
+  baselines: z.record(z.string(), baselineSchema),
   // Metric ids hidden from the dashboard (admin-controlled card visibility).
   hiddenMetrics: z.array(z.string()),
   // Exact Jira status names that count as "blocked" for Blocked Time. Empty = auto-detect
@@ -69,6 +90,32 @@ export const DEFAULT_CONFIG: MetricConfig = {
     mttr: { elite: 1, high: 24, medium: 168 }, // hours
   },
   targets: {},
+  baselines: {
+    "lead-time-for-changes": {
+      baseline: "220 Days",
+      week9: "220 Days",
+      week12: "<150 Days",
+      note: "The amount of time from when an idea is proposed, or a hypothesis is formed, until a customer can benefit from that idea.",
+    },
+    "cycle-time": {
+      baseline: "60 Days",
+      week9: "<40 Days",
+      week12: "<15 Days",
+      note: "The amount of time from when work starts on a release until the point where it is released.",
+    },
+    "delivery-predictability": {
+      baseline: "50%",
+      week9: "70%",
+      week12: "80%",
+      note: "Measures how consistently the team delivers the work it commits to within the planned timeframe.",
+    },
+    "work-item-age": {
+      baseline: "140 Days",
+      week9: "<45 Days",
+      week12: "< 30 Days",
+      note: "How long a work item has been in progress and not yet completed.",
+    },
+  },
   hiddenMetrics: [],
   blockedStatuses: [],
   ageExcludedStatuses: [],
@@ -81,6 +128,7 @@ export type PartialMetricConfig = {
   mttrMode?: "proxy" | "incident"
   bands?: Partial<Record<DoraMetricId, Partial<Band>>>
   targets?: Record<string, number>
+  baselines?: Record<string, MetricBaseline>
   hiddenMetrics?: string[]
   blockedStatuses?: string[]
   ageExcludedStatuses?: string[]
@@ -98,6 +146,7 @@ export function mergeConfig(p: PartialMetricConfig): MetricConfig {
     mttrMode: p.mttrMode ?? DEFAULT_CONFIG.mttrMode,
     bands,
     targets: { ...DEFAULT_CONFIG.targets, ...(p.targets ?? {}) },
+    baselines: { ...DEFAULT_CONFIG.baselines, ...(p.baselines ?? {}) },
     hiddenMetrics: p.hiddenMetrics ?? DEFAULT_CONFIG.hiddenMetrics,
     blockedStatuses: p.blockedStatuses ?? DEFAULT_CONFIG.blockedStatuses,
     ageExcludedStatuses: p.ageExcludedStatuses ?? DEFAULT_CONFIG.ageExcludedStatuses,
