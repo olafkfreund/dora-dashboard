@@ -304,6 +304,99 @@ function ModernView({ items, liveIds, onOpen }: ViewProps) {
   )
 }
 
+// The four flow KPIs that carry a programme baseline (order = display order).
+// Kept as literals so this client module needn't import the zod-backed config.
+const BASELINE_IDS = [
+  "lead-time-for-changes",
+  "cycle-time",
+  "delivery-predictability",
+  "work-item-age",
+] as const
+
+/**
+ * Static KPI baseline boxes, rendered on top of the metric cards. The box styling
+ * follows the active view (cards / charts / modern) and the theme tokens; the text
+ * (baseline number, label, definition) is static and identical across views.
+ */
+function BaselineRow({ view, baselines }: { view: ViewMode; baselines?: MetricConfig["baselines"] }) {
+  const items = BASELINE_IDS.map((id) => ({
+    id,
+    m: metrics.find((x) => x.id === id),
+    b: baselines?.[id],
+  })).filter((r) => r.m && r.b)
+  if (items.length === 0) return null
+
+  // Match each view's card column count (cards = 4-up, charts/modern = 2-up).
+  const grid = view === "cards" ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2"
+
+  return (
+    <div className={cn("mb-8 grid grid-cols-1 gap-4", grid)}>
+      {items.map(({ id, m, b }) => {
+        const Icon = m!.icon
+        const label = m!.label
+        const accent = m!.accent
+        const text = (
+          <>
+            <p className="text-2xl font-bold tracking-tight text-card-foreground">{b!.baseline}</p>
+            <p className="mt-1 text-sm font-semibold text-card-foreground">{label}</p>
+            <p className="mt-2 text-xs leading-snug text-muted-foreground">{b!.note}</p>
+          </>
+        )
+
+        if (view === "modern") {
+          return (
+            <div
+              key={id}
+              className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 text-center shadow-sm"
+            >
+              <div
+                className="pointer-events-none absolute -right-10 -top-10 size-32 rounded-full opacity-25 blur-3xl"
+                style={{ backgroundColor: accent }}
+              />
+              <div className="relative flex flex-col items-center">
+                <div
+                  className="mb-3 flex size-9 items-center justify-center rounded-xl text-white shadow-md"
+                  style={{ backgroundColor: accent }}
+                >
+                  <Icon className="size-5" />
+                </div>
+                {text}
+              </div>
+            </div>
+          )
+        }
+
+        if (view === "charts") {
+          return (
+            <Card key={id} className="overflow-hidden text-center">
+              <div className="h-1 w-full" style={{ backgroundColor: accent }} />
+              <div className="flex flex-col items-center px-4 py-5">
+                <div
+                  className="mb-3 flex size-9 items-center justify-center rounded-lg text-white"
+                  style={{ backgroundColor: accent }}
+                >
+                  <Icon className="size-5" />
+                </div>
+                {text}
+              </div>
+            </Card>
+          )
+        }
+
+        // cards (default)
+        return (
+          <Card key={id} className="flex flex-col items-center px-4 py-5 text-center">
+            <div className="mb-3 flex size-9 items-center justify-center rounded-lg bg-muted text-foreground">
+              <Icon className="size-5" />
+            </div>
+            {text}
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
+
 function GroupHeading({ group }: { group: string }) {
   return (
     <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -394,6 +487,8 @@ export function MetricExplorer({
           })}
         </div>
       </div>
+
+      <BaselineRow view={view} baselines={config?.baselines} />
 
       {view === "cards" && <CardsView items={items} liveIds={liveIds} onOpen={onOpen} />}
       {view === "charts" && <ChartsView items={items} liveIds={liveIds} onOpen={onOpen} />}

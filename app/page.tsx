@@ -2,7 +2,6 @@ import { FileDown, Sheet } from "lucide-react"
 import { requireUser } from "@/lib/auth-helpers"
 import { AppHeader } from "@/components/app-header"
 import { MetricExplorer, type MetricOverride } from "@/components/metric-explorer"
-import { KpiBaseline } from "@/components/kpi-baseline"
 import { computeDora } from "@/lib/metrics/dora"
 import { computeJiraMetrics } from "@/lib/metrics/jira-metrics"
 import { computeCoverageMetric } from "@/lib/metrics/coverage"
@@ -141,8 +140,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
             </a>
           </div>
         </div>
-
-        <KpiBaseline config={metricConfig} />
 
         <MetricExplorer overrides={overrides} config={metricConfig} />
       </main>
