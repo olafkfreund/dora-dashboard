@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth-helpers"
 import { writeAudit } from "@/lib/audit"
 import { saveMetricConfig } from "@/lib/metrics/config-store"
 import {
+  BASELINE_METRIC_IDS,
   DORA_METRIC_IDS,
   mergeConfig,
   metricConfigSchema,
@@ -43,6 +44,17 @@ export async function saveMetricConfigAction(_prev: ActionState, formData: FormD
     }
   }
 
+  const str = (name: string) => String(formData.get(name) ?? "").trim()
+  const baselines: PartialMetricConfig["baselines"] = {}
+  for (const id of BASELINE_METRIC_IDS) {
+    baselines![id] = {
+      baseline: str(`baseline:${id}:baseline`),
+      week9: str(`baseline:${id}:week9`),
+      week12: str(`baseline:${id}:week12`),
+      note: str(`baseline:${id}:note`),
+    }
+  }
+
   const partial: PartialMetricConfig = {
     deployment: {
       environments: csv(formData, "environments"),
@@ -53,6 +65,7 @@ export async function saveMetricConfigAction(_prev: ActionState, formData: FormD
     windowWeeks: Number(formData.get("windowWeeks")),
     mttrMode: String(formData.get("mttrMode")) === "incident" ? "incident" : "proxy",
     bands,
+    baselines,
     // Card visibility: any metric not ticked "visible" is hidden.
     hiddenMetrics: (() => {
       const visible = new Set(formData.getAll("visibleCards").map(String))
