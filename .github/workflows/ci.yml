@@ -27,9 +27,9 @@ jobs:
       DATABASE_URL: postgresql://dora:dora@localhost:5432/dora
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -52,7 +52,7 @@ jobs:
   helm-lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: azure/setup-helm@v4
       - name: Helm lint
         run: helm lint charts/dora-dashboard -f charts/dora-dashboard/values-aws.yaml

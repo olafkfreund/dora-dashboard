@@ -2,16 +2,20 @@
 
 import * as React from "react"
 
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)"
+
+// Subscribe to the OS reduced-motion setting via useSyncExternalStore — no
+// setState in an effect. Server snapshot is false (motion allowed by default).
 function usePrefersReducedMotion() {
-  const [reduced, setReduced] = React.useState(false)
-  React.useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)")
-    setReduced(mq.matches)
-    const on = () => setReduced(mq.matches)
-    mq.addEventListener?.("change", on)
-    return () => mq.removeEventListener?.("change", on)
-  }, [])
-  return reduced
+  return React.useSyncExternalStore(
+    (onChange) => {
+      const mq = window.matchMedia(REDUCED_MOTION_QUERY)
+      mq.addEventListener?.("change", onChange)
+      return () => mq.removeEventListener?.("change", onChange)
+    },
+    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
+    () => false,
+  )
 }
 
 /** Animated count-up for the leading numeric portion of a value string. */
@@ -29,13 +33,11 @@ export function CountUp({
   const target = match ? parseFloat(match[1]) : NaN
   const suffix = match ? match[2] : value
   const decimals = match && match[1].includes(".") ? 1 : 0
-  const [display, setDisplay] = React.useState(reduced || isNaN(target) ? target : 0)
+  const animate = !isNaN(target) && !reduced
+  const [display, setDisplay] = React.useState(animate ? 0 : target)
 
   React.useEffect(() => {
-    if (isNaN(target) || reduced) {
-      setDisplay(target)
-      return
-    }
+    if (!animate) return
     let raf = 0
     let start = 0
     const tick = (t: number) => {
@@ -47,12 +49,13 @@ export function CountUp({
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [target, durationMs, reduced])
+  }, [animate, target, durationMs])
 
   if (isNaN(target)) return <span className={className}>{value}</span>
+  const shown = animate ? display : target
   return (
     <span className={className}>
-      {display.toFixed(decimals)}
+      {shown.toFixed(decimals)}
       {suffix}
     </span>
   )

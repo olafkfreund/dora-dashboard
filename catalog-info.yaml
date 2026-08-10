@@ -1,0 +1,41 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: dora-dashboard
+  title: DORA Dashboard
+  description: >-
+    Self-hosted delivery-intelligence portal for regulated environments. Ingests
+    GitLab and Jira, computes DORA-4 and extended delivery/quality metrics, behind
+    Entra ID SSO and GitHub OAuth.
+  annotations:
+    # Enables the TechDocs tab. mkdocs.yml lives at the repo root (dir:.).
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: synechron/DORA
+  tags:
+    - nextjs
+    - typescript
+    - dora
+    - delivery-metrics
+    - postgresql
+    - self-hosted
+  links:
+    - url: https://github.com/synechron/DORA
+      title: Repository
+      icon: github
+spec:
+  type: service
+  lifecycle: production
+  # Update this to a real Backstage Group entity in your org (e.g. group:default/delivery-intelligence).
+  owner: group:default/dora-maintainers
+  dependsOn:
+    - resource:default/dora-postgres
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: dora-postgres
+  title: DORA Dashboard Database
+  description: PostgreSQL 16 store for ingested events, metric snapshots, users, RBAC and audit logs.
+spec:
+  type: database
+  owner: group:default/dora-maintainers

@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a defect in the DORA Dashboard
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. **Do not include any client-identifying data,
+        real credentials, or production data** in this report — use redacted or
+        synthetic examples.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+      placeholder: When I open the metrics dashboard, Cycle Time shows ...
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Metrics engine / formulas
+        - Ingestion (GitLab/Jira)
+        - Auth / SSO / RBAC
+        - Dashboard UI
+        - Deployment (Docker/Helm/Azure)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Image tag or git SHA.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Redacted logs or screenshots.
+      render: shell
