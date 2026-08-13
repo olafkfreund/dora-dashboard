@@ -73,46 +73,6 @@ function pointsFor(data: number[], w: number, h: number, pad: number) {
   })
 }
 
-/** Simple line + soft area. Used in the detail dialog. */
-export function Sparkline({
-  data,
-  color,
-  height = 64,
-}: {
-  data: number[]
-  color: string
-  height?: number
-}) {
-  const width = 320
-  const pad = 6
-  const pts = pointsFor(data, width, height, pad)
-  const line = pts.map(([x, y]) => `${x},${y}`).join(" ")
-  const area = `${pad},${height - pad} ${line} ${width - pad},${height - pad}`
-  return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      className="h-16 w-full"
-      preserveAspectRatio="none"
-      role="img"
-      aria-label="Trend over the last 8 periods"
-    >
-      <polygon points={area} fill={color} opacity={0.12} />
-      <polyline
-        points={line}
-        fill="none"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
-      />
-      {pts.map(([x, y], i) => (
-        <circle key={i} cx={x} cy={y} r={i === pts.length - 1 ? 3 : 0} fill={color} />
-      ))}
-    </svg>
-  )
-}
-
 /** Colored vertical bar chart (Charts view). */
 export function BarChart({
   data,

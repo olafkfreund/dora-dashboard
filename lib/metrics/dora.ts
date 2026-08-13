@@ -7,9 +7,6 @@ import { isProdEnv } from "./quality-compute"
 import { getMetricConfig } from "./config-store"
 import type { TeamFilter } from "@/lib/teams/types"
 
-export type { DoraMetric, DoraResult, DeploymentRow } from "./dora-compute"
-export { computeDoraFromRows } from "./dora-compute"
-
 /** Compute DORA from ingested GitLab production deployments (DB-backed). Optional team filter. */
 export async function computeDora(now = new Date(), filter?: TeamFilter | null): Promise<DoraResult> {
   // The configurable rolling window drives both the DB fetch and the compute window.

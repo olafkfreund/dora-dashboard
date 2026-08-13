@@ -1,7 +1,7 @@
 // Password policy for local accounts (regulated-environment baseline).
 // Min 12 chars, with lower + upper + digit + symbol.
 
-export const PASSWORD_MIN_LENGTH = 12
+const PASSWORD_MIN_LENGTH = 12
 
 /** Returns an error message if the password is too weak, or null if it passes. */
 export function validatePassword(pw: string): string | null {
