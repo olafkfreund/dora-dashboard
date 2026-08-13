@@ -318,7 +318,15 @@ const BASELINE_IDS = [
  * follows the active view (cards / charts / modern) and the theme tokens; the text
  * (baseline number, label, definition) is static and identical across views.
  */
-function BaselineRow({ view, baselines }: { view: ViewMode; baselines?: MetricConfig["baselines"] }) {
+function BaselineRow({
+  view,
+  baselines,
+  currentById,
+}: {
+  view: ViewMode
+  baselines?: MetricConfig["baselines"]
+  currentById?: Record<string, string>
+}) {
   const items = BASELINE_IDS.map((id) => ({
     id,
     m: metrics.find((x) => x.id === id),
@@ -335,11 +343,31 @@ function BaselineRow({ view, baselines }: { view: ViewMode; baselines?: MetricCo
         const Icon = m!.icon
         const label = m!.label
         const accent = m!.accent
+        // Baseline + 12-week Target are static (programme goals); Current is live.
+        const rows: [string, string, boolean][] = [
+          ["Baseline", b!.baseline, false],
+          ["Target", b!.week12, false],
+          ["Current", currentById?.[id] ?? "—", true],
+        ]
         const text = (
           <>
-            <p className="text-2xl font-bold tracking-tight text-card-foreground">{b!.baseline}</p>
-            <p className="mt-1 text-sm font-semibold text-card-foreground">{label}</p>
-            <p className="mt-2 text-xs leading-snug text-muted-foreground">{b!.note}</p>
+            <p className="text-sm font-semibold text-card-foreground">{label}</p>
+            <dl className="mt-3 w-full space-y-1.5">
+              {rows.map(([k, v, isCurrent]) => (
+                <div key={k} className="flex items-baseline justify-between gap-3">
+                  <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    {k}
+                  </dt>
+                  <dd
+                    className="text-sm font-bold tabular-nums"
+                    style={isCurrent ? { color: accent } : undefined}
+                  >
+                    {v}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-3 text-xs leading-snug text-muted-foreground">{b!.note}</p>
           </>
         )
 
@@ -492,7 +520,11 @@ export function MetricExplorer({
         </div>
       </div>
 
-      <BaselineRow view={view} baselines={config?.baselines} />
+      <BaselineRow
+        view={view}
+        baselines={config?.baselines}
+        currentById={Object.fromEntries(items.map((m) => [m.id, m.value]))}
+      />
 
       {view === "cards" && <CardsView items={items} liveIds={liveIds} onOpen={onOpen} />}
       {view === "charts" && <ChartsView items={items} liveIds={liveIds} onOpen={onOpen} />}
