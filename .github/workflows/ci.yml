@@ -46,6 +46,13 @@ jobs:
       - name: Apply migrations
         run: node scripts/migrate.mjs
 
+      # The suite existed and was never run: 9 test files, a `test` script in
+      # package.json, and no CI step invoking it. Tests that do not run are
+      # indistinguishable from tests that do not exist, except that they look
+      # like coverage.
+      - name: Test
+        run: npm test
+
       - name: Build
         run: npm run build
 

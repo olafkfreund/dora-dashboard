@@ -20,6 +20,15 @@ env:
   EKS_CLUSTER: aws-dashboard-cluster
   NAMESPACE: dora
   RELEASE: dora-dashboard
+  # The keyless identity cosign will have embedded in the certificate: this
+  # workflow, on this ref, in this repo. A LITERAL, not a regexp -- it is
+  # asserted by `cosign verify --certificate-identity` and by
+  # `fides verify-image --signer`, and the latter takes an exact SAN.
+  #
+  # A workflow_dispatch run from a branch other than main WILL fail the verify
+  # step, because the certificate then reads @refs/heads/<branch>. Intended.
+  SIGNER_IDENTITY: 'https://github.com/${{ github.repository }}/.github/workflows/deploy.yml@refs/heads/main'
+  SIGNER_ISSUER: 'https://token.actions.githubusercontent.com'
 
 jobs:
   build:
@@ -35,6 +44,14 @@ jobs:
     outputs:
       tag: ${{ steps.vars.outputs.tag }}
       digest: ${{ steps.build.outputs.digest }}
+      trail: ${{ steps.fides.outputs.trail }}
+    env:
+      # secrets/vars contexts are not allowed in a step-level `if:`, so expose
+      # them here and gate on env.* instead. Inert until all three are set,
+      # which keeps the pipeline green for a fork or a fresh clone.
+      FIDES_SERVER_URL: ${{ secrets.FIDES_SERVER_URL }}
+      FIDES_API_TOKEN: ${{ secrets.FIDES_API_TOKEN }}
+      FIDES_FLOW_ID: ${{ vars.FIDES_FLOW_ID }}
     steps:
       - uses: actions/checkout@v5
 
@@ -51,24 +68,42 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Push ONLY the immutable :<sha> tag here. `:latest` moves after the
+      # image is signed and the signature verified -- see "Move :latest" below.
+      #
+      # Pushing both together left :latest unsigned for the whole scan+sign
+      # window. That window is not theoretical: on 2026-08-13 the Fides
+      # pipeline entered it for real when a transient registry error killed a
+      # job between push and sign, and admission control then denied every pod
+      # for ~25 minutes because :latest genuinely had no signature.
       - name: Build and push
         id: build
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.tag }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Scan image (Trivy)
+      # CVE gate. Runs AFTER push (it scans the pushed image BY DIGEST -- the
+      # artifact that actually ships) but BEFORE signing, so a vulnerable image
+      # is never signed, never attested and never deployed.
+      #
+      # This was `exit-code: "0"` -- report only. A scan that cannot fail the
+      # build is worse than no scan, because the pipeline then signs, attests
+      # and deploys the image while the evidence says "scanned".
+      #
+      # Policy: fixable HIGH/CRITICAL (`--ignore-unfixed`). Unfixable findings
+      # are dropped, which is only honest while the base still gets updates --
+      # node:22-alpine does.
+      - name: Scan image (Trivy) — fixable HIGH/CRITICAL is a hard gate
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.tag }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
           format: table
-          exit-code: "0" # report only; set to "1" to fail on findings
+          exit-code: "1"
+          ignore-unfixed: true
           severity: CRITICAL,HIGH
 
       # ---- Supply chain: SBOM + signing (by immutable digest) ----
@@ -80,6 +115,37 @@ jobs:
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           DIGEST: ${{ steps.build.outputs.digest }}
         run: cosign sign --yes "${IMAGE}@${DIGEST}"
+
+      # Not decoration: a signing step that fails open leaves an unverifiable
+      # image that looks shipped. Assert here, at build time, so it fails in CI
+      # rather than at a deploy.
+      - name: Verify signature (self-test)
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          cosign verify \
+            --certificate-identity "${SIGNER_IDENTITY}" \
+            --certificate-oidc-issuer "${SIGNER_ISSUER}" \
+            "${IMAGE}@${DIGEST}"
+
+      # Only NOW move :latest, once these bytes are signed AND the signature has
+      # been verified. `imagetools create` only writes a new tag pointing at the
+      # existing manifest -- no rebuild, no layer re-push, and the digest (and
+      # therefore the signature) is unchanged.
+      - name: Move :latest to the signed digest
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create --tag "${IMAGE}:latest" "${IMAGE}@${DIGEST}"
+          now="$(docker buildx imagetools inspect "${IMAGE}:latest" --format '{{.Manifest.Digest}}')"
+          if [ "${now}" != "${DIGEST}" ]; then
+            echo "::error::${IMAGE}:latest is ${now}, expected ${DIGEST}"
+            exit 1
+          fi
+          echo ":latest -> ${now} (signed)"
 
       - name: Generate SBOM (CycloneDX)
         uses: anchore/sbom-action@v0
@@ -105,6 +171,114 @@ jobs:
           path: |
             sbom.cyclonedx.json
             sbom.cyclonedx.json.sha256
+
+      # ----------------------------------------------------------------------
+      # Record this build in Fides.
+      #
+      # Everything above already happens -- the image is scanned, signed, and
+      # an SBOM is attested to it -- but all of it lives in a job log with a
+      # 90-day retention and in registry-side attestations nobody queries.
+      # "Which commit produced the digest running in prod, was it scanned, and
+      # was its signature verified?" is an audit question, and until now this
+      # pipeline could not answer it after the logs expired.
+      #
+      # Placed AFTER the CVE gate and after signing, so a digest only enters
+      # the evidence vault once it has passed everything.
+      #
+      # Inert until configured: needs secrets FIDES_SERVER_URL /
+      # FIDES_API_TOKEN and variable FIDES_FLOW_ID.
+      # ----------------------------------------------------------------------
+      - name: Install the fides CLI
+        if: env.FIDES_API_TOKEN != '' && env.FIDES_SERVER_URL != '' && env.FIDES_FLOW_ID != ''
+        uses: olafkfreund/fides/.github/actions/setup-fides@main
+
+      - name: Record provenance in Fides
+        id: fides
+        if: env.FIDES_API_TOKEN != '' && env.FIDES_SERVER_URL != '' && env.FIDES_FLOW_ID != ''
+        env:
+          # Every interpolation goes through the environment, never inline into
+          # the script. COMMITTER especially: a commit author sets their own
+          # email, so inlining it is a script-injection hole.
+          COMMITTER: ${{ github.event.head_commit.author.email }}
+          TRAIL_NAME: ${{ github.sha }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          trail_id="$(fides trail start \
+            --flow "${FIDES_FLOW_ID}" \
+            --trail "${TRAIL_NAME}" \
+            --repository "${REPO_URL}" \
+            --commit "${COMMIT_SHA}" \
+            --committer "${COMMITTER}" \
+            --quiet)"
+          echo "trail ${trail_id}"
+          echo "trail=${trail_id}" >> "${GITHUB_OUTPUT}"
+
+          # Report the digest by value: this is the artifact the gate scanned
+          # and cosign signed, not a tag that could be re-pointed later.
+          fides artifact report \
+            --trail "${trail_id}" \
+            --sha256 "${DIGEST#sha256:}" \
+            --name dora-dashboard \
+            --type docker
+          echo "recorded index ${DIGEST}"
+
+          # Also register the per-platform manifest digests.
+          #
+          # steps.build.outputs.digest is the INDEX digest, and buildx attaches
+          # a provenance attestation that embeds the commit -- so a rebuild
+          # whose image content is byte-identical still gets a NEW index
+          # digest. containerd, which already holds that content, keeps
+          # reporting the index digest it first resolved, and the runtime
+          # snapshot then sees a digest CI never registered and calls it a
+          # shadow change, forever. Registering both means whichever one the
+          # runtime reports is known to Fides.
+          docker buildx imagetools inspect "${IMAGE}@${DIGEST}" --raw \
+            | jq -r '.manifests[]? | select(.platform.os != "unknown") | .digest' \
+            | while read -r child; do
+                [ -n "${child}" ] || continue
+                fides artifact report \
+                  --trail "${trail_id}" \
+                  --sha256 "${child#sha256:}" \
+                  --name dora-dashboard \
+                  --type docker
+                echo "recorded platform ${child}"
+              done
+
+          # The SBOM is already attested to the image in the registry; this
+          # puts it where an auditor looks, alongside the trail it belongs to.
+          fides attest sbom \
+            --trail "${trail_id}" \
+            --artifact-sha "${DIGEST#sha256:}" \
+            --file sbom.cyclonedx.json || \
+            echo "::warning::SBOM ingest failed; provenance and verification are still recorded"
+
+          # Verify the signature with Fides' own verifier and record the
+          # verdict. Not a second opinion on whether the image is signed -- the
+          # cosign self-test above already gated that -- but the difference
+          # between a fact in a CI log and a fact in the evidence vault.
+          #
+          # LAST, deliberately: a gate placed before the recording it guards
+          # destroys the evidence it exists to certify. Record everything, then
+          # gate. Exits 2 on an unverified image, which fails this job and so
+          # blocks the deploy below.
+          fides verify-image \
+            --sha256 "${DIGEST#sha256:}" \
+            --image "${IMAGE}" \
+            --signer "${SIGNER_IDENTITY}" \
+            --issuer "${SIGNER_ISSUER}" \
+            --trail "${trail_id}"
+
+      - name: Note if provenance recording is not wired
+        if: env.FIDES_API_TOKEN == '' || env.FIDES_SERVER_URL == '' || env.FIDES_FLOW_ID == ''
+        run: |
+          echo "::warning::No provenance was recorded for this build — the"
+          echo "::warning::dora environment cannot be compliant without it."
+          echo "::notice::Set secrets FIDES_SERVER_URL / FIDES_API_TOKEN and"
+          echo "::notice::variable FIDES_FLOW_ID to enable."
 
   deploy:
     needs: build
