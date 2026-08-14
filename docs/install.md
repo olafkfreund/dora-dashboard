@@ -154,11 +154,39 @@ helm upgrade dora-dashboard charts/dora-dashboard -n dora \
 helm rollback dora-dashboard -n dora</code></pre>
 <p>Schema migrations run automatically (idempotent) via the migrate init-container on each new pod.</p>
 
+## GitOps with FluxCD
+
+<p>For pull-based, auditable delivery the live cluster can be reconciled by <strong>FluxCD</strong>
+instead of a human running <code>helm upgrade</code>. The desired state lives in
+<code>clusters/aws-dashboard/</code> — a <code>GitRepository</code> plus a <code>HelmRelease</code> that
+renders this chart with <code>values.yaml</code> + <code>values-aws.yaml</code>. The release is
+<strong>adopted in place</strong> (<code>releaseName: dora-dashboard</code>,
+<code>storageNamespace: dora</code>), and <code>secrets.databaseUrl</code> stays empty so the chart's
+<code>lookup</code> preserves the live in-cluster Secret (the RDS <code>DATABASE_URL</code> never enters
+git). Cutting over loses nothing.</p>
+
+<pre><code>export AWS_PROFILE=Synechron
+aws eks update-kubeconfig --name aws-dashboard-cluster --region eu-west-2
+export GITHUB_TOKEN=&lt;pat-with-repo-scope&gt;
+flux bootstrap github \
+  --owner=olafkfreund --repository=dora-dashboard --branch=main \
+  --path=clusters/aws-dashboard \
+  --components=source-controller,helm-controller,kustomize-controller --personal</code></pre>
+
+<p>Release a new build by committing a new <code>image.tag</code> in <code>values-aws.yaml</code>
+(quote it — a bare numeric tag is coerced to a float and breaks the ref); roll back with
+<code>git revert</code>.</p>
+
+<div class="note"><strong>Capacity.</strong> Flux needs ~2 controller pods — add a second node
+before bootstrapping on a pod-cap-constrained cluster. The full bootstrap / adoption / day-2 /
+rollback runbook is in
+<a href="https://github.com/olafkfreund/dora-dashboard/blob/main/clusters/aws-dashboard/README.md"><code>clusters/aws-dashboard/README.md</code></a>.</div>
+
 ## CI/CD (GitHub Actions)
 
 <ul>
 <li><code>ci.yml</code> — install, lint, typecheck, run migrations, unit tests, build; Helm lint/template.</li>
-<li><code>deploy.yml</code> — build &amp; push the image to GHCR (with Trivy scan), assume an AWS OIDC role, and <code>helm upgrade</code> into EKS. Set the <code>AWS_ROLE_ARN</code> repo secret.</li>
+<li><code>deploy.yml</code> — build &amp; push the image to GHCR (with Trivy scan), assume an AWS OIDC role, and <code>helm upgrade</code> into EKS. Set the <code>AWS_ROLE_ARN</code> repo secret. <em>(Superseded by the Flux GitOps flow above once Flux is bootstrapped.)</em></li>
 </ul>
 
 ## Troubleshooting

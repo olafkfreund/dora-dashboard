@@ -192,6 +192,39 @@ Set a shared `SYNC_TOKEN` env on the app for non-interactive callers (an admin s
 also works). The `/api/sync` path is exempt from the auth middleware so the `SYNC_TOKEN`
 path works.
 
+## GitOps with FluxCD
+
+For a pull-based, auditable delivery model, the live `aws-dashboard-cluster` install can
+be driven by **FluxCD** instead of a human running `helm upgrade`. The desired state lives
+in `clusters/aws-dashboard/` (a `GitRepository` + a `HelmRelease` that renders this same
+chart with `values.yaml` + `values-aws.yaml`), and Flux reconciles the cluster to it.
+
+- **Adopt in place** — the `HelmRelease` uses `releaseName: dora-dashboard` and
+  `storageNamespace: dora`, so helm-controller *upgrades the existing release* rather than
+  creating a new one. Cutting over loses nothing.
+- **Secrets are preserved** — `secrets.databaseUrl` stays empty, so the chart's `lookup`
+  carries the live in-cluster Secret (RDS `DATABASE_URL`, `AUTH_SECRET`,
+  `APP_ENCRYPTION_KEY`, …) forward on every reconcile. No secret is ever committed to git.
+- **The image tag is the git-tracked knob** — pin it in `values-aws.yaml`
+  (`image.tag: "6157572"`, quoted; a bare numeric tag is coerced to a float and breaks the
+  ref). Release a new build by committing a new tag; roll back with `git revert`.
+
+```bash
+export AWS_PROFILE=Synechron
+aws eks update-kubeconfig --name aws-dashboard-cluster --region eu-west-2
+export GITHUB_TOKEN=<pat-with-repo-scope>
+flux bootstrap github \
+  --owner=olafkfreund --repository=dora-dashboard --branch=main \
+  --path=clusters/aws-dashboard \
+  --components=source-controller,helm-controller,kustomize-controller --personal
+```
+
+!!! note "Capacity prerequisite"
+    Flux needs ~2 controller pods. On a single, pod-cap-constrained node, add a second
+    node (or a larger instance) **before** bootstrapping — do not force it onto a full
+    node. The full bootstrap, adoption-check, day-2 and rollback runbook is in
+    [`clusters/aws-dashboard/README.md`](https://github.com/olafkfreund/dora-dashboard/blob/main/clusters/aws-dashboard/README.md).
+
 ## CI/CD (GitHub Actions)
 
 - **`ci.yml`** — on push/PR: install, lint, typecheck, run migrations against a throwaway

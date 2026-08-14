@@ -54,6 +54,30 @@ helm upgrade --install dora-dashboard charts/dora-dashboard \
   --set image.tag=manual --wait --timeout 10m
 ```
 
+## GitOps with FluxCD (recommended for the live cluster)
+
+Instead of running `helm upgrade` by hand, the live install can be reconciled by
+**FluxCD** from git. The desired state lives in `clusters/aws-dashboard/` (a
+`GitRepository` + a `HelmRelease` rendering this chart with `values.yaml` +
+`values-aws.yaml`). The `HelmRelease` **adopts the existing release in place**
+(`releaseName: dora-dashboard`, `storageNamespace: dora`), and secrets are preserved via
+the chart's `lookup` (the RDS `DATABASE_URL` never enters git) — so cut-over loses nothing.
+
+```bash
+export AWS_PROFILE=Synechron
+aws eks update-kubeconfig --name aws-dashboard-cluster --region eu-west-2
+export GITHUB_TOKEN=<pat-with-repo-scope>
+flux bootstrap github \
+  --owner=olafkfreund --repository=dora-dashboard --branch=main \
+  --path=clusters/aws-dashboard \
+  --components=source-controller,helm-controller,kustomize-controller --personal
+```
+
+Releasing a new build becomes a commit that bumps `image.tag` in `values-aws.yaml`; roll
+back with `git revert`. **Capacity note:** Flux needs ~2 controller pods — add a second
+node before bootstrapping on a pod-cap-constrained cluster. Full bootstrap / adoption /
+day-2 / rollback runbook: [`clusters/aws-dashboard/README.md`](clusters/aws-dashboard/README.md).
+
 ## Getting the bootstrap admin password
 
 ```bash

@@ -42,6 +42,7 @@ project's GitHub epic + issues for tracked work.
 
 - **Local / small:** `docker compose up` (app + PostgreSQL + reverse proxy)
 - **Enterprise:** Helm chart into Kubernetes
+- **GitOps:** FluxCD reconciles the live EKS install from `clusters/aws-dashboard/` — see the [Flux runbook](clusters/aws-dashboard/README.md) and [DEPLOY.md](DEPLOY.md)
 - Air-gap-friendly: self-hosted fonts/assets, no runtime CDN dependency
 
 ## License
