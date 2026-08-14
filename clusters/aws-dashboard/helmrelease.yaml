@@ -17,12 +17,14 @@ spec:
         kind: GitRepository
         name: dora-dashboard
         namespace: flux-system
-      # Layer the AWS overrides over the chart defaults (paths are relative to
-      # the chart root). image.tag (6157572) lives in values-aws.yaml — bump it
-      # there via a git commit to release a new build.
+      # Layer the AWS overrides over the chart defaults. valuesFiles are resolved
+      # relative to the SourceRef (repo) ROOT — not the chart path — and the chart's
+      # own values.yaml is NOT auto-included, so list it explicitly first.
+      # image.tag (6157572) lives in values-aws.yaml — bump it there via a git
+      # commit to release a new build.
       valuesFiles:
-        - values.yaml
-        - values-aws.yaml
+        - charts/dora-dashboard/values.yaml
+        - charts/dora-dashboard/values-aws.yaml
       reconcileStrategy: ChartVersion
   # secrets.databaseUrl is intentionally left empty (chart default). The chart's
   # secret template preserves the live in-cluster Secret (RDS DATABASE_URL,

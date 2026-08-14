@@ -32,6 +32,26 @@ owned outside Flux, so Flux can never prune it.
   the image ref). Releasing a new build = bump that line in a commit. Optional
   image-automation (below) makes this hands-free.
 
+## Current state (LIVE)
+
+Flux is installed and reconciling the release as of 2026-08-14:
+
+- **Flux v2.6.4** (pinned — the cluster is Kubernetes **v1.31**, and Flux ≥2.9 requires
+  k8s ≥1.33; 2.6.x supports 1.30–1.33). Components: `source-controller` + `helm-controller`.
+- Installed with `flux install` + `kubectl apply` of `gitrepository.yaml` +
+  `helmrelease.yaml` (see "Live install (no PAT)" below) — **not** `flux bootstrap`, because
+  the available token lacks push to this repo. Git is still the source of truth for the
+  chart + values; the controllers themselves are just not yet self-managed from git.
+- The existing release was **adopted in place** — Helm revision advanced 64 → **65**, the
+  running pod was **not restarted**, and the RDS `DATABASE_URL` was preserved. Nothing lost.
+
+Two gotchas that were fixed during rollout (both now correct in-repo):
+
+- `image.tag` must be **quoted** in `values-aws.yaml` — a bare numeric tag renders as a float.
+- `valuesFiles` are resolved **relative to the repo root**, not the chart path, and the
+  chart's own `values.yaml` is **not** auto-included — hence the full
+  `charts/dora-dashboard/values.yaml` + `charts/dora-dashboard/values-aws.yaml` paths.
+
 ## Prerequisite: cluster capacity
 
 `aws-dashboard-cluster` is currently a **single node, pod capacity 11, 10 pods in
@@ -65,6 +85,19 @@ flux bootstrap github \
 `flux bootstrap` installs the controllers, commits `clusters/aws-dashboard/flux-system/`,
 and creates a Flux `Kustomization` that reconciles this directory — which applies the
 `GitRepository` and `HelmRelease` here.
+
+### Live install (no PAT) — what's actually deployed
+
+When a push-capable token isn't available, install the controllers and apply the two
+resources directly. Git remains the source of truth for the chart + values.
+
+```sh
+# k8s 1.31 → pin Flux <2.9 (use the 2.6.4 CLI so it installs matching controllers)
+flux install --components=source-controller,helm-controller
+
+kubectl apply -f clusters/aws-dashboard/gitrepository.yaml \
+              -f clusters/aws-dashboard/helmrelease.yaml
+```
 
 ### Adoption check
 
