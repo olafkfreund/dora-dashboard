@@ -25,7 +25,11 @@ spec:
       valuesFiles:
         - charts/dora-dashboard/values.yaml
         - charts/dora-dashboard/values-aws.yaml
-      reconcileStrategy: ChartVersion
+      # Revision (NOT ChartVersion): the image tag lives in a values FILE, so the
+      # Chart.yaml version never bumps on a promotion. Revision appends the git
+      # revision to the packaged chart version, so every commit that changes the
+      # tag produces a new chart version and helm-controller actually rolls it out.
+      reconcileStrategy: Revision
   # secrets.databaseUrl is intentionally left empty (chart default). The chart's
   # secret template preserves the live in-cluster Secret (RDS DATABASE_URL,
   # AUTH_SECRET, APP_ENCRYPTION_KEY, ...) via `lookup`, so nothing is lost on
