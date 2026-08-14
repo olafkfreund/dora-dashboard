@@ -1,0 +1,17 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: dora-dashboard
+  namespace: flux-system
+spec:
+  interval: 1m
+  # Public repo — no secretRef needed. For the private synechron mirror, add a
+  # secretRef pointing at a basic-auth/deploy-key Secret in flux-system.
+  url: https://github.com/olafkfreund/dora-dashboard
+  ref:
+    branch: main
+  # Only the chart + its values change deployment; ignore everything else so app
+  # commits don't trigger a needless helm reconcile.
+  ignore: |
+    /*
+    !/charts/dora-dashboard/

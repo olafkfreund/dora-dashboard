@@ -10,7 +10,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/olafkfreund/dora-dashboard
-  tag: 6157572  # pinned to deployed immutable build
+  tag: "6157572"  # pinned to deployed immutable build (quoted: a bare numeric tag is coerced to a float)
   pullPolicy: IfNotPresent
 
 # GHCR image is private — the deploy creates this pull secret in the namespace.

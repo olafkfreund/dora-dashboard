@@ -1,0 +1,41 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: dora-dashboard
+  namespace: flux-system
+spec:
+  interval: 10m
+  # Adopt the EXISTING manual release in place — same name + namespace, so
+  # helm-controller upgrades the current release rather than creating a new one.
+  releaseName: dora-dashboard
+  targetNamespace: dora
+  storageNamespace: dora
+  chart:
+    spec:
+      chart: ./charts/dora-dashboard
+      sourceRef:
+        kind: GitRepository
+        name: dora-dashboard
+        namespace: flux-system
+      # Layer the AWS overrides over the chart defaults (paths are relative to
+      # the chart root). image.tag (6157572) lives in values-aws.yaml — bump it
+      # there via a git commit to release a new build.
+      valuesFiles:
+        - values.yaml
+        - values-aws.yaml
+      reconcileStrategy: ChartVersion
+  # secrets.databaseUrl is intentionally left empty (chart default). The chart's
+  # secret template preserves the live in-cluster Secret (RDS DATABASE_URL,
+  # AUTH_SECRET, APP_ENCRYPTION_KEY, ...) via `lookup`, so nothing is lost on
+  # adoption. Migrate these to External Secrets Operator / SOPS later — see README.
+  install:
+    # Do NOT create the dora namespace here — it pre-exists and is owned outside Flux.
+    createNamespace: false
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+    # Keep the last-known-good release if an upgrade fails to go Ready.
+    cleanupOnFail: true
