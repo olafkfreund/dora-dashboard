@@ -16,10 +16,6 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  AWS_REGION: eu-west-2
-  EKS_CLUSTER: aws-dashboard-cluster
-  NAMESPACE: dora
-  RELEASE: dora-dashboard
   # The keyless identity cosign will have embedded in the certificate: this
   # workflow, on this ref, in this repo. A LITERAL, not a regexp -- it is
   # asserted by `cosign verify --certificate-identity` and by
@@ -280,33 +276,28 @@ jobs:
           echo "::notice::Set secrets FIDES_SERVER_URL / FIDES_API_TOKEN and"
           echo "::notice::variable FIDES_FLOW_ID to enable."
 
-  deploy:
+  # GitOps promotion: pin the freshly-built, signed image into values-aws.yaml and
+  # commit it. FluxCD (running in aws-dashboard-cluster) reconciles the change and
+  # rolls it out — so CI never needs cluster credentials. `[skip ci]` stops the
+  # promotion commit from triggering another build.
+  promote:
     needs: build
     runs-on: ubuntu-latest
     permissions:
-      id-token: write # for AWS OIDC
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v5
-
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          ref: main
 
-      - name: Update kubeconfig
-        run: aws eks update-kubeconfig --name "$EKS_CLUSTER" --region "$AWS_REGION"
-
-      - uses: azure/setup-helm@v4
-
-      - name: Helm upgrade --install
+      - name: Pin values-aws image.tag to the new build
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
         run: |
-          helm upgrade --install "$RELEASE" charts/dora-dashboard \
-            --namespace "$NAMESPACE" --create-namespace \
-            -f charts/dora-dashboard/values-aws.yaml \
-            --set image.tag="${{ needs.build.outputs.tag }}" \
-            --wait --timeout 10m
-
-      - name: Rollout status
-        run: kubectl rollout status deploy/"$RELEASE" -n "$NAMESPACE" --timeout=5m
+          f=charts/dora-dashboard/values-aws.yaml
+          sed -i -E "s|^([[:space:]]*tag:[[:space:]]).*|\1\"${TAG}\"  # promoted by CI; Flux rolls this out|" "$f"
+          if git diff --quiet -- "$f"; then echo "tag unchanged — nothing to promote"; exit 0; fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(deploy): promote image ${TAG} to aws-dashboard-cluster [skip ci]" -- "$f"
+          git push origin HEAD:main
