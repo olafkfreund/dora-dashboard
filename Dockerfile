@@ -27,6 +27,23 @@ ENV NODE_ENV=production \
 # Non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
+# Drop npm and corepack from the RUNTIME image.
+#
+# Nothing here runs them: the server is `node server.js`, and the migrate Job
+# and init container run `node scripts/migrate.mjs`. But npm ships its own
+# bundled dependency tree inside the base image, and that tree is what the CVE
+# gate keeps finding -- tar (CRITICAL, gzip-bomb DoS), sigstore, ip-address,
+# picomatch and brace-expansion were all reported against `package.json` paths
+# no part of this application installs.
+#
+# Patching them is not possible from our package.json; they belong to npm.
+# Removing the package manager from a production runtime is the fix, and it is
+# what you want anyway: nothing should be installing packages inside a running
+# container.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
+
 # Standalone server + static assets
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
