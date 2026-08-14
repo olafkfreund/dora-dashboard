@@ -28,9 +28,23 @@ env:
 
 jobs:
   build:
-    # Opt-in: set repository variable DEPLOY_ENABLED=true (and configure GHCR /
-    # AWS_ROLE_ARN / the EKS target) to enable the build+deploy pipeline. Until
-    # then this workflow is skipped so main stays green without cloud secrets.
+    # Opt-in: set repository variable DEPLOY_ENABLED=true to enable the
+    # build+promote pipeline. Until then this workflow is skipped so main stays
+    # green without registry credentials.
+    #
+    # AWS_ROLE_ARN is NOT needed any more, and neither is any cluster access.
+    # Delivery is GitOps: the promote job commits the image tag and FluxCD --
+    # running inside aws-dashboard-cluster -- reconciles it. CI reaches nothing
+    # but GHCR and this repository.
+    #
+    # The IAM role dora-github-deploy and its EKS access entry are therefore
+    # dead. If nothing is going to re-add a cluster-credentialed job, remove
+    # them rather than leaving namespace-admin standing for no caller:
+    #   aws eks disassociate-access-policy --cluster-name aws-dashboard-cluster \
+    #     --principal-arn arn:aws:iam::796973489124:role/dora-github-deploy \
+    #     --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy
+    #   aws eks delete-access-entry --cluster-name aws-dashboard-cluster \
+    #     --principal-arn arn:aws:iam::796973489124:role/dora-github-deploy
     if: ${{ vars.DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     permissions:
