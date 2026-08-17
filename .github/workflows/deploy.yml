@@ -324,4 +324,8 @@ jobs:
           MIRROR_TOKEN: ${{ secrets.SYNECHRON_MIRROR_TOKEN }}
         run: |
           if [ -z "$MIRROR_TOKEN" ]; then echo "SYNECHRON_MIRROR_TOKEN unset — skipping mirror"; exit 0; fi
-          git push "https://x-access-token:${MIRROR_TOKEN}@github.com/synechron/DORA.git" HEAD:main
+          # actions/checkout persists the job GITHUB_TOKEN as an http.extraheader
+          # for github.com, which would override the URL token below and 404 on
+          # the cross-org repo. Blank that header so the mirror token is used.
+          git -c http.https://github.com/.extraheader= \
+            push "https://x-access-token:${MIRROR_TOKEN}@github.com/synechron/DORA.git" HEAD:main
