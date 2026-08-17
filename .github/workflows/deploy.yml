@@ -315,3 +315,13 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore(deploy): promote image ${TAG} to aws-dashboard-cluster [skip ci]" -- "$f"
           git push origin HEAD:main
+
+      # Keep the private synechron/DORA mirror level with public main. Runs even
+      # when the tag was unchanged above (own step, not gated on the promote).
+      # No-op if the mirror token isn't configured.
+      - name: Mirror main to synechron/DORA
+        env:
+          MIRROR_TOKEN: ${{ secrets.SYNECHRON_MIRROR_TOKEN }}
+        run: |
+          if [ -z "$MIRROR_TOKEN" ]; then echo "SYNECHRON_MIRROR_TOKEN unset — skipping mirror"; exit 0; fi
+          git push "https://x-access-token:${MIRROR_TOKEN}@github.com/synechron/DORA.git" HEAD:main
