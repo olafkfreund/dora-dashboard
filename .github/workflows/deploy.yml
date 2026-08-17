@@ -303,6 +303,9 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: main
+          # Full history: the mirror push needs synechron's older tip in local
+          # history to prove a fast-forward (a shallow clone rejects it).
+          fetch-depth: 0
 
       - name: Pin values-aws image.tag to the new build
         env:
