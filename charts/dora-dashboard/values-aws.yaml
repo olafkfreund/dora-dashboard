@@ -10,7 +10,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/olafkfreund/dora-dashboard
-  tag: "83626292458798560c0eb5d410ce28100f346d67"  # promoted by CI; Flux rolls this out
+  tag: "75231ed0d0e225dd0a5f3055680a4bca57e75ede"  # promoted by CI; Flux rolls this out
   pullPolicy: IfNotPresent
 
 # GHCR image is private — the deploy creates this pull secret in the namespace.
