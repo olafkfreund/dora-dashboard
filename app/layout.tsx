@@ -1,16 +1,21 @@
 import type { Metadata } from "next"
-import { Montserrat, Geist_Mono } from "next/font/google"
+import localFont from "next/font/local"
 import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css"
 
-const fontSans = Montserrat({
-  subsets: ["latin"],
+// Self-hosted to avoid runtime/build fetches to fonts.gstatic.com (blocked by
+// the client's Azure Firewall URL whitelist). Files are latin-subset variable
+// woff2 committed under app/fonts.
+const fontSans = localFont({
+  src: "./fonts/montserrat-variable.woff2",
   variable: "--font-sans",
+  display: "swap",
 })
 
-const fontMono = Geist_Mono({
-  subsets: ["latin"],
+const fontMono = localFont({
+  src: "./fonts/geist-mono-variable.woff2",
   variable: "--font-mono",
+  display: "swap",
 })
 
 export const metadata: Metadata = {
