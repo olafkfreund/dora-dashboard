@@ -51,6 +51,10 @@ autoscaling:
 config:
   # Public origin used by Auth.js. Defaults to https://<ingress.host>.
   nextauthUrl: ""
+  # Extra Server Action origins (comma-separated host[:port], no scheme). Only
+  # needed if an external proxy/firewall presents a host different from
+  # nextauthUrl/ingress.host — otherwise leave empty (login 403 fix).
+  serverActionsAllowedOrigins: ""
 
 ## Secrets. Generated on first install and preserved across upgrades (via lookup).
 ## For production, set secrets.databaseUrl to a managed DB and disable postgres.
