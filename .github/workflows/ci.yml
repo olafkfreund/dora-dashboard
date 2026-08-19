@@ -26,6 +26,11 @@ jobs:
     env:
       DATABASE_URL: postgresql://dora:dora@localhost:5432/dora
       NEXT_TELEMETRY_DISABLED: "1"
+      # Fides test-result attestation (inert until configured). Job-level so the
+      # step `if:` can read them — mirrors deploy.yml.
+      FIDES_SERVER_URL: ${{ secrets.FIDES_SERVER_URL }}
+      FIDES_API_TOKEN: ${{ secrets.FIDES_API_TOKEN }}
+      FIDES_FLOW_ID: ${{ vars.FIDES_FLOW_ID }}
     steps:
       - uses: actions/checkout@v5
 
@@ -51,7 +56,44 @@ jobs:
       # indistinguishable from tests that do not exist, except that they look
       # like coverage.
       - name: Test
-        run: npm test
+        run: npm test -- --reporter=default --reporter=json --outputFile.json=./test-summary.json
+
+      # Record the unit-test result on the Fides trail as a `test-result`
+      # attestation (payload carries passed/failed/skipped/total). This is the
+      # same tamper-evident chain the portal CR "Tests" tab and the ServiceNow
+      # u_fides_test_result mirror read back — Fides is master for test evidence.
+      # Resolves the same trail deploy.yml uses (flow + commit sha), so the
+      # result lands on the deployment's trail. `always()` so a failing suite
+      # still records compliant=false. Inert until the Fides secrets are set.
+      - name: Attest test results to Fides
+        if: ${{ always() && env.FIDES_API_TOKEN != '' && env.FIDES_SERVER_URL != '' && env.FIDES_FLOW_ID != '' }}
+        env:
+          TRAIL_NAME: ${{ github.sha }}
+          COMMIT_SHA: ${{ github.sha }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          set -euo pipefail
+          [ -f test-summary.json ] || { echo "no test-summary.json; skipping"; exit 0; }
+          base="${FIDES_SERVER_URL%/}/api/v1"
+          auth="Authorization: Bearer ${FIDES_API_TOKEN}"
+          trail_id="$(curl -sf -H "$auth" "$base/flows/${FIDES_FLOW_ID}/trails" \
+            | jq -r --arg n "$TRAIL_NAME" '.[]?|select(.name==$n)|.id' | head -1 || true)"
+          if [ -z "${trail_id:-}" ] || [ "$trail_id" = "null" ]; then
+            trail_id="$(curl -sf -H "$auth" -H 'Content-Type: application/json' -X POST "$base/trails" \
+              -d "$(jq -n --arg f "$FIDES_FLOW_ID" --arg n "$TRAIL_NAME" --arg c "$COMMIT_SHA" --arg r "$REPO_URL" \
+                    '{flow_id:$f,name:$n,commit:$c,repository:$r}')" | jq -r '.id')"
+          fi
+          P=$(jq -r '[.numPassedTests,0]|map(numbers)|first//0' test-summary.json)
+          F=$(jq -r '[.numFailedTests,0]|map(numbers)|first//0' test-summary.json)
+          Sk=$(jq -r '[.numPendingTests,.numTodoTests,0]|map(numbers)|first//0' test-summary.json)
+          Tt=$(jq -r '[.numTotalTests,0]|map(numbers)|first//0' test-summary.json)
+          if [ "$F" = "0" ]; then C=true; else C=false; fi
+          payload="$(jq -nc --argjson c "$C" --argjson p "$P" --argjson f "$F" --argjson s "$Sk" --argjson t "$Tt" \
+            '{compliant:$c,passed:$p,failed:$f,skipped:$s,total:$t,suite:"dora-dashboard vitest"}')"
+          curl -sf -H "$auth" -H 'Content-Type: application/json' -X POST "$base/attestations" \
+            -d "$(jq -n --arg tid "$trail_id" --arg pl "$payload" \
+                  '{trail_id:$tid,name:"unit-tests",type_name:"test-result",payload:$pl}')" >/dev/null
+          echo "attested test-result on trail ${trail_id}: passed=$P failed=$F skipped=$Sk total=$Tt"
 
       - name: Build
         run: npm run build
