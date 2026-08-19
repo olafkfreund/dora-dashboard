@@ -217,13 +217,20 @@ jobs:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           set -euo pipefail
+          # ponytail: temporary diagnostic — surface why provenance recording
+          # exits 1. `fides flow list` is the skill's connectivity check; it
+          # prints the real error (connection refused / 401 / flow not found)
+          # that `--quiet` inside $(...) was swallowing. Revert after diagnosis.
+          echo "=== fides connectivity check ==="
+          fides flow list
+          echo "=== fides version ==="
+          fides --version || true
           trail_id="$(fides trail start \
             --flow "${FIDES_FLOW_ID}" \
             --trail "${TRAIL_NAME}" \
             --repository "${REPO_URL}" \
             --commit "${COMMIT_SHA}" \
-            --committer "${COMMITTER}" \
-            --quiet)"
+            --committer "${COMMITTER}")"
           echo "trail ${trail_id}"
           echo "trail=${trail_id}" >> "${GITHUB_OUTPUT}"
 
