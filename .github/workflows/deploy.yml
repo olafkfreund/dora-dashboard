@@ -207,8 +207,10 @@ jobs:
         if: env.FIDES_API_TOKEN != '' && env.FIDES_SERVER_URL != '' && env.FIDES_FLOW_ID != ''
         env:
           # Every interpolation goes through the environment, never inline into
-          # the script (avoids shell/script-injection from attacker-controlled
-          # git metadata).
+          # the script. COMMITTER especially: a commit author sets their own
+          # email, so inlining it is a script-injection hole. (Recorded as a
+          # trail tag and used by the segregation-of-duties attestation.)
+          COMMITTER: ${{ github.event.head_commit.author.email }}
           TRAIL_NAME: ${{ github.sha }}
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}
           COMMIT_SHA: ${{ github.sha }}
@@ -216,12 +218,23 @@ jobs:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           set -euo pipefail
-          trail_id="$(fides trail start \
+          # trail start is NOT idempotent: re-running a build for the same
+          # commit (its trail name) returns 409. Tolerate that by reusing the
+          # existing trail, and capture the error instead of letting --quiet
+          # swallow it (a bare failure here looked like a silent exit 1).
+          if ! trail_id="$(fides trail start \
             --flow "${FIDES_FLOW_ID}" \
             --trail "${TRAIL_NAME}" \
             --repository "${REPO_URL}" \
             --commit "${COMMIT_SHA}" \
-            --quiet)"
+            --committer "${COMMITTER}" \
+            --quiet 2>/tmp/fides_trail.err)"; then
+            echo "trail start did not create a new trail:"; cat /tmp/fides_trail.err
+            trail_id="$(fides flow trails --flow "${FIDES_FLOW_ID}" \
+              | jq -r --arg n "${TRAIL_NAME}" 'map(select(.name==$n)) | .[0].id // empty')"
+            [ -n "${trail_id}" ] || { echo "::error::could not start or find trail ${TRAIL_NAME}"; exit 1; }
+            echo "reusing existing trail ${trail_id}"
+          fi
           echo "trail ${trail_id}"
           echo "trail=${trail_id}" >> "${GITHUB_OUTPUT}"
 
