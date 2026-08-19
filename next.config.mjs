@@ -36,6 +36,20 @@ const securityHeaders = [
   },
 ]
 
+// Server Actions (used by the login form) enforce an Origin===Host check. Behind
+// a reverse proxy / firewall the forwarded host can differ from the browser
+// Origin, which Next.js rejects with 403 ("An unexpected response was received
+// from the server"). Declare the public origin(s) so the check passes. Derived
+// from the operator's existing public URL (AUTH_URL / NEXTAUTH_URL); extra hosts
+// can be added via SERVER_ACTIONS_ALLOWED_ORIGINS (comma-separated host[:port]).
+const publicUrl = process.env.AUTH_URL || process.env.NEXTAUTH_URL
+const allowedOrigins = [
+  ...(publicUrl ? [new URL(publicUrl).host] : []),
+  ...(process.env.SERVER_ACTIONS_ALLOWED_ORIGINS?.split(",") ?? []),
+]
+  .map((h) => h.trim())
+  .filter(Boolean)
+
 const nextConfig = {
   // NOTE: The reference app used `output: "export"` (static). This product needs
   // SSR + API routes for auth (Entra ID / GitHub OAuth) and data ingestion,
@@ -45,6 +59,9 @@ const nextConfig = {
   reactStrictMode: true,
   // Don't advertise the framework/version.
   poweredByHeader: false,
+  ...(allowedOrigins.length
+    ? { experimental: { serverActions: { allowedOrigins } } }
+    : {}),
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }]
   },
