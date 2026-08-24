@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm"
 import { auth } from "@/auth"
 import { db } from "@/db"
 import { users } from "@/db/schema"
+import { ANON_ACCESS, ANON_USER } from "@/lib/anon"
 
 export interface SessionUser {
   id: string
@@ -21,7 +22,13 @@ export interface SessionUser {
 export async function requireUser(): Promise<SessionUser> {
   const session = await auth()
   const id = session?.user?.id
-  if (!id) redirect("/login")
+  // A real session always wins (admins can still log in for elevated access).
+  // Only fall back to the synthetic VIEWER when anon mode is on and nobody is
+  // signed in.
+  if (!id) {
+    if (ANON_ACCESS) return { ...ANON_USER }
+    redirect("/login")
+  }
 
   const rows = await db
     .select({ id: users.id, name: users.name, email: users.email, role: users.role, status: users.status })

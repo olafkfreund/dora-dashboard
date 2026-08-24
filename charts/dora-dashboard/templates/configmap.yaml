@@ -13,3 +13,6 @@ data:
   {{- with .Values.config.serverActionsAllowedOrigins }}
   SERVER_ACTIONS_ALLOWED_ORIGINS: {{ . | quote }}
   {{- end }}
+  {{- if .Values.config.anonAccess }}
+  DORA_ANON_ACCESS: "true"
+  {{- end }}

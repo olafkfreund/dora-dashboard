@@ -2,13 +2,14 @@ import { auth } from "@/auth"
 import { buildReport } from "@/lib/report/report-data"
 import { renderReportPdf } from "@/lib/report/report-document"
 import { resolveTeamFilter } from "@/lib/teams/store"
+import { ANON_ACCESS } from "@/lib/anon"
 
 export const runtime = "nodejs"
 
 // Branded PDF delivery report (colored metric cards, breakdowns, needs-attention).
 export async function GET(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) {
+  if (!session?.user?.id && !ANON_ACCESS) {
     return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
   }
 

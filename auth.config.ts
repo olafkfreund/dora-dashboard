@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth"
+import { ANON_ACCESS } from "@/lib/anon"
 
 // Edge-safe config (no DB / Node-only imports) — shared by middleware and the full auth.
 export const authConfig = {
@@ -12,6 +13,7 @@ export const authConfig = {
   callbacks: {
     // Route protection for middleware.
     authorized({ auth, request }) {
+      if (ANON_ACCESS) return true
       const isLoggedIn = !!auth?.user
       const { pathname } = request.nextUrl
       const isPublic = pathname === "/login"

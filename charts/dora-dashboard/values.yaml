@@ -55,6 +55,11 @@ config:
   # needed if an external proxy/firewall presents a host different from
   # nextauthUrl/ingress.host — otherwise leave empty (login 403 fix).
   serverActionsAllowedOrigins: ""
+  # Anonymous read-only access: expose the dashboard without per-user login
+  # (demos / internal kiosks / already behind an SSO proxy). VIEWER-only — admin,
+  # user management, Settings and audit export still require a real login, which
+  # stays available. OFF by default; only enable on a trusted/gated network.
+  anonAccess: false
 
 ## Secrets. Generated on first install and preserved across upgrades (via lookup).
 ## For production, set secrets.databaseUrl to a managed DB and disable postgres.
