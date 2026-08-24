@@ -63,6 +63,8 @@ export async function saveMetricConfigAction(_prev: ActionState, formData: FormD
       failureStatuses: failureStatuses.length ? failureStatuses : ["failed"],
     },
     windowWeeks: Number(formData.get("windowWeeks")),
+    // "Measure from" floor: empty = no floor (null), else the chosen sprint's start ISO date.
+    measureFrom: str("measureFrom") || null,
     mttrMode: String(formData.get("mttrMode")) === "incident" ? "incident" : "proxy",
     bands,
     baselines,
@@ -88,6 +90,7 @@ export async function saveMetricConfigAction(_prev: ActionState, formData: FormD
   await writeAudit(admin.id, "metric_config.update", team ? `team:${team}` : "default", {
     environments: partial.deployment!.environments,
     windowWeeks: partial.windowWeeks,
+    measureFrom: partial.measureFrom,
     failureStatuses: partial.deployment!.failureStatuses,
   })
   revalidatePath("/settings")

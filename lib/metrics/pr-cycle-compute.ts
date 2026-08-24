@@ -29,8 +29,8 @@ function long(ms: number): string {
 }
 
 /** Break each merged MR's life into Coding → Pickup → Review → Deploy and report medians. */
-export function computePrCycle(mrs: PrMrRow[], deployBySha: Map<string, Date>, now = new Date()): PrCycleResult {
-  const since = new Date(now.getTime() - WEEKS * 7 * DAY)
+export function computePrCycle(mrs: PrMrRow[], deployBySha: Map<string, Date>, now = new Date(), weeks = WEEKS): PrCycleResult {
+  const since = new Date(now.getTime() - weeks * 7 * DAY)
   const merged = mrs.filter((m) => m.mergedAt && m.mergedAt >= since)
   if (!merged.length) return { hasData: false }
 

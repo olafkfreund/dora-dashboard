@@ -32,10 +32,13 @@ export function MetricsPanel({
   config,
   teams = [],
   currentTeam,
+  sprints = [],
 }: {
   config: MetricConfig
   teams?: { slug: string; name: string }[]
   currentTeam?: string
+  // Ingested sprints for the "Measure from" floor: value = sprint start ISO date.
+  sprints?: { value: string; label: string }[]
 }) {
   const [save, saveAction, saving] = useActionState(saveMetricConfigAction, undefined)
   const [reset, resetAction, resetting] = useActionState(resetMetricConfigAction, undefined)
@@ -127,6 +130,31 @@ export function MetricsPanel({
               defaultValue={config.windowWeeks}
               className="max-w-32"
             />
+            <div className="space-y-1.5">
+              <label htmlFor="measureFrom" className="text-sm font-medium">
+                Measure from (sprint)
+              </label>
+              <select
+                id="measureFrom"
+                name="measureFrom"
+                defaultValue={config.measureFrom ?? ""}
+                className="w-full max-w-md rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+              >
+                <option value="" className="bg-background text-foreground">
+                  Rolling window only (no floor)
+                </option>
+                {sprints.map((s) => (
+                  <option key={s.value} value={s.value} className="bg-background text-foreground">
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Overrides the rolling window: every metric is measured from this
+                sprint&apos;s start date forward. Leave as &quot;Rolling window only&quot;
+                for the default behaviour.
+              </p>
+            </div>
             <div className="space-y-1.5">
               <label htmlFor="mttrMode" className="text-sm font-medium">
                 MTTR source

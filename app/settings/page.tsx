@@ -1,7 +1,8 @@
 import { headers } from "next/headers"
 import { requireAdmin } from "@/lib/auth-helpers"
 import { db } from "@/db"
-import { integrations, ssoProviders } from "@/db/schema"
+import { integrations, ssoProviders, jiraSprints } from "@/db/schema"
+import { desc } from "drizzle-orm"
 import { AppHeader } from "@/components/app-header"
 import { features } from "@/lib/features"
 import { getMetricConfig } from "@/lib/metrics/config-store"
@@ -47,14 +48,26 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const admin = await requireAdmin()
   const sp = await searchParams
   const metricsTeam = typeof sp.metricsTeam === "string" ? sp.metricsTeam : undefined
-  const [intRows, ssoRows, metricCfg, teamList, assignables, h] = await Promise.all([
+  const [intRows, ssoRows, metricCfg, teamList, assignables, sprintRows, h] = await Promise.all([
     db.select().from(integrations),
     db.select().from(ssoProviders),
     getMetricConfig(metricsTeam),
     listTeams(),
     distinctAssignables(),
+    db
+      .select({ name: jiraSprints.name, startDate: jiraSprints.startDate })
+      .from(jiraSprints)
+      .orderBy(desc(jiraSprints.startDate)),
     headers(),
   ])
+  // "Measure from" options — sprints with a start date, newest first. Value is the
+  // ISO start date (the floor applied to every metric); label shows the sprint name.
+  const sprintOptions = sprintRows
+    .filter((s) => s.startDate)
+    .map((s) => ({
+      value: s.startDate!.toISOString(),
+      label: `${s.name ?? "Sprint"} · started ${s.startDate!.toISOString().slice(0, 10)}`,
+    }))
   const digest = await getDigestSettings()
   const gitlabRow = intRows.find((r) => r.provider === "GITLAB")
   const gitlab = toIntegrationView(gitlabRow)
@@ -112,7 +125,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Metrics
           </h2>
-          <MetricsPanel config={metricCfg} teams={teamList} currentTeam={metricsTeam} />
+          <MetricsPanel config={metricCfg} teams={teamList} currentTeam={metricsTeam} sprints={sprintOptions} />
         </section>
 
         <section>

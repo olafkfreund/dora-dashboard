@@ -48,6 +48,11 @@ export const metricConfigSchema = z.object({
     failureStatuses: z.array(z.string()),
   }),
   windowWeeks: z.number().int().positive().max(52),
+  // Absolute start floor for ALL metrics (ISO date). When set, every metric is
+  // measured from this date forward, overriding the rolling windowWeeks — used to
+  // start the picture at a chosen sprint (e.g. "Sprint 35" → its startDate) so
+  // pre-baseline history no longer skews the numbers. null = rolling window only.
+  measureFrom: z.string().nullable(),
   // MTTR source: "proxy" = failed→next-success deploy recovery; "incident" = GitLab incidents (close−open).
   mttrMode: z.enum(["proxy", "incident"]),
   bands: z.object({
@@ -82,6 +87,7 @@ export const DEFAULT_CONFIG: MetricConfig = {
     failureStatuses: ["failed"],
   },
   windowWeeks: 8,
+  measureFrom: null,
   mttrMode: "proxy",
   bands: {
     "deployment-frequency": { elite: 7, high: 1, medium: 0.25 },
@@ -125,6 +131,7 @@ export const DEFAULT_CONFIG: MetricConfig = {
 export type PartialMetricConfig = {
   deployment?: Partial<MetricConfig["deployment"]>
   windowWeeks?: number
+  measureFrom?: string | null
   mttrMode?: "proxy" | "incident"
   bands?: Partial<Record<DoraMetricId, Partial<Band>>>
   targets?: Record<string, number>
@@ -143,6 +150,7 @@ export function mergeConfig(p: PartialMetricConfig): MetricConfig {
   return {
     deployment: { ...DEFAULT_CONFIG.deployment, ...(p.deployment ?? {}) },
     windowWeeks: p.windowWeeks ?? DEFAULT_CONFIG.windowWeeks,
+    measureFrom: p.measureFrom ?? DEFAULT_CONFIG.measureFrom,
     mttrMode: p.mttrMode ?? DEFAULT_CONFIG.mttrMode,
     bands,
     targets: { ...DEFAULT_CONFIG.targets, ...(p.targets ?? {}) },
@@ -159,4 +167,18 @@ export function parseConfig(raw: unknown): MetricConfig {
   const merged = mergeConfig(raw as PartialMetricConfig)
   const res = metricConfigSchema.safeParse(merged)
   return res.success ? res.data : DEFAULT_CONFIG
+}
+
+/**
+ * Effective observation-window length in weeks. With no `measureFrom`, the rolling
+ * `defaultWeeks` is used unchanged. When `measureFrom` is set it OVERRIDES the rolling
+ * window: the window spans measureFrom→now (rounded up to whole weeks, min 1), so all
+ * metrics start at that date — wider than the default when the floor is old, narrower
+ * when it is recent. Keeping a single week-count keeps the existing `since`/bucketing
+ * math intact everywhere it is threaded.
+ */
+export function effectiveWeeks(defaultWeeks: number, measureFrom: Date | null, now: Date): number {
+  if (!measureFrom) return defaultWeeks
+  const weeks = Math.ceil((now.getTime() - measureFrom.getTime()) / (7 * 864e5))
+  return Math.max(1, weeks)
 }

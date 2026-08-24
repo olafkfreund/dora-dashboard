@@ -6,6 +6,7 @@ import { computeFlow, computeVelocity, computeFeatureCycle, type FlowResult, typ
 import { computeQuality, type QualityResult } from "./quality-compute"
 import { computeAllocation, type AllocResult } from "./allocation-compute"
 import { getMetricConfig } from "./config-store"
+import { effectiveWeeks } from "./config"
 import type { TeamFilter } from "@/lib/teams/types"
 
 /** Compute Jira flow + velocity + quality + allocation metrics from ingested data (DB-backed). Optional team filter. */
@@ -80,11 +81,14 @@ export async function computeJiraMetrics(
     storyPoints: i.storyPoints,
   }))
   const mc = await getMetricConfig(filter?.slug)
+  // measureFrom (when set) overrides the rolling window: measure from that date forward.
+  const floor = mc.measureFrom ? new Date(mc.measureFrom) : null
+  const weeks = effectiveWeeks(mc.windowWeeks, floor, now)
   return {
-    flow: computeFlow(flowIssues, now, flowTransitions, mc.blockedStatuses, mc.ageExcludedStatuses),
-    velocity: computeVelocity(sprints, flowIssues),
+    flow: computeFlow(flowIssues, now, flowTransitions, mc.blockedStatuses, mc.ageExcludedStatuses, weeks),
+    velocity: computeVelocity(sprints, flowIssues, 5, floor),
     quality: computeQuality(qualityRows),
     allocation: computeAllocation(allocRows),
-    feature: computeFeatureCycle(issues),
+    feature: computeFeatureCycle(issues, floor),
   }
 }

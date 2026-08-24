@@ -3,11 +3,17 @@ import { and, gte, isNotNull, inArray } from "drizzle-orm"
 import { db } from "@/db"
 import { gitlabDeployments, gitlabMergeRequests } from "@/db/schema"
 import { computePrCycle, type PrCycleResult } from "./pr-cycle-compute"
+import { getMetricConfig } from "./config-store"
+import { effectiveWeeks } from "./config"
 import type { TeamFilter } from "@/lib/teams/types"
 
 /** PR (merge-request) cycle-time breakdown from ingested GitLab data (DB-backed). Optional team filter. */
 export async function computePrCycleMetric(now = new Date(), filter?: TeamFilter | null): Promise<PrCycleResult> {
-  const since = new Date(now.getTime() - 8 * 7 * 864e5)
+  const mc = await getMetricConfig(filter?.slug)
+  // measureFrom (when set) overrides the rolling window: measure from that date forward.
+  const floor = mc.measureFrom ? new Date(mc.measureFrom) : null
+  const weeks = effectiveWeeks(mc.windowWeeks, floor, now)
+  const since = new Date(now.getTime() - weeks * 7 * 864e5)
   const glPaths = filter?.gitlabProjectPaths
   if (filter && (!glPaths || glPaths.length === 0)) return { hasData: false }
   const teamMr = glPaths ? inArray(gitlabMergeRequests.projectPath, glPaths) : undefined
@@ -34,5 +40,5 @@ export async function computePrCycleMetric(now = new Date(), filter?: TeamFilter
     const cur = deployBySha.get(d.sha)
     if (!cur || d.finishedAt < cur) deployBySha.set(d.sha, d.finishedAt)
   }
-  return computePrCycle(mrs, deployBySha, now)
+  return computePrCycle(mrs, deployBySha, now, weeks)
 }

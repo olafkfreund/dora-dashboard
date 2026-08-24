@@ -154,17 +154,17 @@ function blockedSecondsByIssue(issues: FlowIssueRow[], transitions: TransitionRo
 }
 
 /** Cycle Time, Work Item Age, Blocked Time from Jira issues. */
-export function computeFlow(issues: FlowIssueRow[], now = new Date(), transitions: TransitionRow[] = [], blockedStatuses: string[] = [], ageExcludedStatuses: string[] = []): FlowResult {
+export function computeFlow(issues: FlowIssueRow[], now = new Date(), transitions: TransitionRow[] = [], blockedStatuses: string[] = [], ageExcludedStatuses: string[] = [], weeks = WEEKS): FlowResult {
   if (!issues.length) return { hasData: false }
-  const since = new Date(now.getTime() - WEEKS * 7 * DAY)
-  const weekIdx = (d: Date) => Math.min(WEEKS - 1, Math.max(0, Math.floor((d.getTime() - since.getTime()) / (7 * DAY))))
+  const since = new Date(now.getTime() - weeks * 7 * DAY)
+  const weekIdx = (d: Date) => Math.min(weeks - 1, Math.max(0, Math.floor((d.getTime() - since.getTime()) / (7 * DAY))))
 
   // Cycle Time — completed items in window: resolved − created.
   // Clock starts at issue creation (request → done), matching how the delivery teams
   // and their Jira board report cycle time; the GitLab DORA "Lead Time for Changes"
   // (commit → deploy) is a separate, code-side metric.
   const cycleAll: number[] = []
-  const cycleByWeek: number[][] = Array.from({ length: WEEKS }, () => [])
+  const cycleByWeek: number[][] = Array.from({ length: weeks }, () => [])
   for (const i of issues) {
     if (isDone(i.statusCategory) && i.resolvedAt && i.createdAt && i.resolvedAt >= since) {
       const days = (i.resolvedAt.getTime() - i.createdAt.getTime()) / DAY
@@ -326,14 +326,19 @@ function velocityByPi(issues: FlowIssueRow[], pis: string[], windowSize: number)
 }
 
 /** Average Velocity + Delivery Predictability. Prefers Program Increments; falls back to sprints. */
-export function computeVelocity(sprints: SprintRow[], issues: FlowIssueRow[], windowSize = 5): VelocityResult {
+export function computeVelocity(sprints: SprintRow[], issues: FlowIssueRow[], windowSize = 5, measureFrom: Date | null = null): VelocityResult {
+  // Measure-from floor: drop work completed before the floor so pre-baseline
+  // sprints/PIs don't skew velocity. Open items (no resolvedAt) stay — they are
+  // current commitments. ponytail: PIs aren't dated, so PI mode is floored by
+  // issue resolution date, not by a PI boundary; refine if a PI→date map appears.
+  const fIssues = measureFrom ? issues.filter((i) => !i.resolvedAt || i.resolvedAt >= measureFrom) : issues
   // Use PI mode only when Program Increments actually carry story points.
-  const piVals = [...new Set(issues.filter((i) => (i.storyPoints ?? 0) > 0).flatMap((i) => i.programIncrement ?? []))]
-  const piResult = piVals.length ? velocityByPi(issues, piVals, windowSize) : null
+  const piVals = [...new Set(fIssues.filter((i) => (i.storyPoints ?? 0) > 0).flatMap((i) => i.programIncrement ?? []))]
+  const piResult = piVals.length ? velocityByPi(fIssues, piVals, windowSize) : null
   if (piResult && piResult.hasData) return piResult
 
   const closed = sprints
-    .filter((s) => s.state === "closed" && s.completeDate)
+    .filter((s) => s.state === "closed" && s.completeDate && (!measureFrom || s.completeDate >= measureFrom))
     .sort((a, b) => a.completeDate!.getTime() - b.completeDate!.getTime())
     .slice(-windowSize)
   if (!closed.length) return { hasData: false }
@@ -343,7 +348,7 @@ export function computeVelocity(sprints: SprintRow[], issues: FlowIssueRow[], wi
   const perSprint: { name: string; committed: number; completed: number }[] = []
   let pointedInClosed = 0
   for (const sprint of closed) {
-    const inSprint = issues.filter((i) => i.sprintId === sprint.id)
+    const inSprint = fIssues.filter((i) => i.sprintId === sprint.id)
     pointedInClosed += inSprint.filter((i) => (i.storyPoints ?? 0) > 0).length
     const committed = inSprint.reduce((a, i) => a + (i.storyPoints ?? 0), 0)
     const completed = inSprint.filter((i) => isDone(i.statusCategory)).reduce((a, i) => a + (i.storyPoints ?? 0), 0)
@@ -406,9 +411,13 @@ export interface FeatureCycleResult {
 }
 
 /** Cycle time per Feature (the parent issue): median(resolved − started) across resolved Features. */
-export function computeFeatureCycle(issues: FlowIssueRow[]): FeatureCycleResult {
+export function computeFeatureCycle(issues: FlowIssueRow[], measureFrom: Date | null = null): FeatureCycleResult {
   const features = issues.filter(
-    (i) => /feature/i.test(i.issueType ?? "") && i.resolvedAt && (i.inProgressAt || i.createdAt)
+    (i) =>
+      /feature/i.test(i.issueType ?? "") &&
+      i.resolvedAt &&
+      (!measureFrom || i.resolvedAt >= measureFrom) &&
+      (i.inProgressAt || i.createdAt)
   )
   const rows = features
     .map((i) => {

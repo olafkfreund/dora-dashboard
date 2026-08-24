@@ -5,17 +5,21 @@ import { gitlabDeployments, gitlabMergeRequests, gitlabIncidents, jiraIssues, in
 import { computeDoraFromRows, computeIncidentMttr, type DoraResult } from "./dora-compute"
 import { isProdEnv } from "./quality-compute"
 import { getMetricConfig } from "./config-store"
+import { effectiveWeeks } from "./config"
 import type { TeamFilter } from "@/lib/teams/types"
 
 /** Compute DORA from ingested GitLab production deployments (DB-backed). Optional team filter. */
 export async function computeDora(now = new Date(), filter?: TeamFilter | null): Promise<DoraResult> {
   // The configurable rolling window drives both the DB fetch and the compute window.
   const mc = await getMetricConfig(filter?.slug)
-  const since = new Date(now.getTime() - mc.windowWeeks * 7 * 864e5)
+  // measureFrom (when set) overrides the rolling window: measure from that date forward.
+  const floor = mc.measureFrom ? new Date(mc.measureFrom) : null
+  const weeks = effectiveWeeks(mc.windowWeeks, floor, now)
+  const since = new Date(now.getTime() - weeks * 7 * 864e5)
   const glPaths = filter?.gitlabProjectPaths
   // A team with no GitLab projects has no DORA data.
   if (filter && (!glPaths || glPaths.length === 0)) {
-    return { hasData: false, deploymentsTotal: 0, windowWeeks: mc.windowWeeks }
+    return { hasData: false, deploymentsTotal: 0, windowWeeks: weeks }
   }
   const teamDep = glPaths ? inArray(gitlabDeployments.projectPath, glPaths) : undefined
   const teamMr = glPaths ? inArray(gitlabMergeRequests.projectPath, glPaths) : undefined
@@ -44,7 +48,7 @@ export async function computeDora(now = new Date(), filter?: TeamFilter | null):
   const result = computeDoraFromRows(rows, now, {
     mrs,
     leadTimeMode,
-    windowWeeks: mc.windowWeeks,
+    windowWeeks: weeks,
     deployment: mc.deployment,
   })
 
@@ -82,7 +86,7 @@ export async function computeDora(now = new Date(), filter?: TeamFilter | null):
         const inc = computeIncidentMttr(
           failures.map((f) => ({ createdAt: f.createdAt, closedAt: f.resolvedAt })),
           now,
-          mc.windowWeeks
+          weeks
         )
         if (inc) result.mttr = { ...inc, note: "Incident-based MTTR — Jira Incidents + Production defects (resolved − created)." }
       }
@@ -93,7 +97,7 @@ export async function computeDora(now = new Date(), filter?: TeamFilter | null):
         .select({ createdAt: gitlabIncidents.createdAt, closedAt: gitlabIncidents.closedAt })
         .from(gitlabIncidents)
         .where(and(isNotNull(gitlabIncidents.closedAt), teamInc))
-      const inc = computeIncidentMttr(incidents, now, mc.windowWeeks)
+      const inc = computeIncidentMttr(incidents, now, weeks)
       if (inc) result.mttr = { ...inc, note: "Incident-based MTTR — GitLab incidents (close − open)." }
     }
   }
