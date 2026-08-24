@@ -45,6 +45,40 @@ project's GitHub epic + issues for tracked work.
 - **GitOps:** FluxCD reconciles the live EKS install from `clusters/aws-dashboard/` — see the [Flux runbook](clusters/aws-dashboard/README.md) and [DEPLOY.md](DEPLOY.md)
 - Air-gap-friendly: self-hosted fonts/assets, no runtime CDN dependency
 
+## Anonymous (no-login) access
+
+By default every route requires a signed-in user. For demos, internal kiosks, or a
+portal that already sits behind an SSO proxy, you can open the **read-only** dashboard
+to anyone without a login.
+
+Set the environment variable (OFF unless it is exactly `true`):
+
+```bash
+DORA_ANON_ACCESS=true
+```
+
+Or, on Kubernetes, via the Helm chart:
+
+```yaml
+# values.yaml
+config:
+  anonAccess: true
+```
+
+When enabled, unauthenticated visitors are treated as a **VIEWER**:
+
+- **Allowed:** the dashboard and the PDF/CSV report exports (read-only).
+- **Still blocked:** Settings, user management, data-source sync triggers, and audit-log
+  export — these require a real login and an **Admin** role.
+- A real login still works and takes precedence, so admins can sign in normally to reach
+  the admin surface.
+- The app logs a `[SECURITY]` warning on startup while this mode is on.
+
+> **Warning:** this removes authentication for viewing delivery metrics. Only enable it on
+> a trusted or otherwise gated network (e.g. behind a corporate SSO proxy or on an
+> air-gapped LAN). It never grants write or admin access, but the metrics themselves become
+> readable by anyone who can reach the URL.
+
 ## License
 
 TBD
